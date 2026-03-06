@@ -1,0 +1,36 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fitscript-ai",
+          "appId": "1:134654943181:android:3b32427b3624b3036d2e84",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "fitscript-ai",
+          "appId": "1:134654943181:ios:4f90390b9b48f3736d2e84",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fitscript-ai",
+          "configurations": {
+            "android": "1:134654943181:android:3b32427b3624b3036d2e84",
+            "ios": "1:134654943181:ios:4f90390b9b48f3736d2e84"
+          }
+        }
+      }
+    }
+  }
+}

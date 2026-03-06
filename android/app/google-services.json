@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "134654943181",
+    "project_id": "fitscript-ai",
+    "storage_bucket": "fitscript-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:134654943181:android:3b32427b3624b3036d2e84",
+        "android_client_info": {
+          "package_name": "com.aimultiapps.fitscript_ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "134654943181-shvk48lare6ompoj6sv5qd7s36t12115.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aimultiapps.fitscript_ai",
+            "certificate_hash": "b1aec922317feabe1e5a00ca23e1c38e85235bc8"
+          }
+        },
+        {
+          "client_id": "134654943181-cgas5v4f0aode8cl4rhpv9o05m43nsgk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAx78rp_z7IjM4Qk2XlSUHKVcWCeHGOuLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "134654943181-cgas5v4f0aode8cl4rhpv9o05m43nsgk.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "134654943181-qrprbg35o8irv054b5v1b3o4noarmu5s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aimultiapps.fitscriptAi"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
