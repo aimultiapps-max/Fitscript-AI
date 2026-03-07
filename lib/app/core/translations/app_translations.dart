@@ -183,9 +183,14 @@ class AppTranslations extends Translations {
       'profile_title_account_subscription': 'Account & Subscription',
       'profile_subscription_status': 'Subscription Status',
       'profile_subscription_free_plan': 'Free Plan',
+      'profile_subscription_premium_plan': 'Premium (FitScript Pro)',
       'profile_subscription_description':
           'Upgrade to unlock all features and remove trial limits.',
+      'profile_subscription_premium_description':
+          'Premium is active. You have full access to analysis and save features.',
       'profile_trial_usage': 'Trial Usage',
+      'profile_trial_unlimited_message':
+          'Unlimited access is active for analysis and save actions.',
       'profile_trial_left': '@count left',
       'profile_trial_lab_result_analysis': 'Lab Result Analysis',
       'profile_trial_save_analysis_result': 'Save Analysis Result',
@@ -289,6 +294,10 @@ class AppTranslations extends Translations {
           'Account already exists with a different sign-in method. Please use the correct method.',
       'profile_auth_error_invalid_credential':
           'Invalid credential. Please try signing in again.',
+      'profile_auth_error_apple_invalid':
+          'Apple sign-in returned an invalid response. Make sure your Apple ID is signed in on this device and try again.',
+      'profile_auth_error_apple_setup':
+          'Apple sign-in token is missing. Verify Sign in with Apple is enabled in Apple Developer and Firebase Console.',
       'profile_auth_error_generic':
           'Authentication error occurred. Please try again.',
     },
@@ -468,9 +477,14 @@ class AppTranslations extends Translations {
       'profile_title_account_subscription': 'Akun & Langganan',
       'profile_subscription_status': 'Status Langganan',
       'profile_subscription_free_plan': 'Paket Gratis',
+      'profile_subscription_premium_plan': 'Premium (FitScript Pro)',
       'profile_subscription_description':
           'Upgrade untuk membuka semua fitur dan menghapus batas trial.',
+      'profile_subscription_premium_description':
+          'Premium aktif. Anda mendapatkan akses penuh untuk analisis dan simpan hasil.',
       'profile_trial_usage': 'Penggunaan Trial',
+      'profile_trial_unlimited_message':
+          'Akses tanpa batas aktif untuk analisis dan simpan hasil.',
       'profile_trial_left': '@count tersisa',
       'profile_trial_lab_result_analysis': 'Analisis Hasil Lab',
       'profile_trial_save_analysis_result': 'Simpan Hasil Analisis',
@@ -573,6 +587,10 @@ class AppTranslations extends Translations {
           'Akun sudah terdaftar dengan metode lain. Silakan gunakan metode yang benar.',
       'profile_auth_error_invalid_credential':
           'Kredensial tidak valid. Coba ulangi proses masuk.',
+      'profile_auth_error_apple_invalid':
+          'Apple sign-in mengembalikan respons tidak valid. Pastikan Apple ID sudah login di perangkat ini lalu coba lagi.',
+      'profile_auth_error_apple_setup':
+          'Token Apple sign-in tidak tersedia. Pastikan Sign in with Apple sudah aktif di Apple Developer dan Firebase Console.',
       'profile_auth_error_generic':
           'Terjadi kendala autentikasi. Silakan coba lagi.',
     },

@@ -85,6 +85,7 @@ class HomeController extends GetxController {
   final maxSaveAnalysisResultFreeTrial = 5.obs;
   final usedAnalysisFreeTrial = 0.obs;
   final usedSaveAnalysisResultFreeTrial = 0.obs;
+  final isPremiumUser = false.obs;
   final analysisHistories = <LabHistoryItem>[].obs;
   final selectedLabImageBytes = Rxn<Uint8List>();
   final selectedLabImageName = RxnString();
@@ -98,10 +99,15 @@ class HomeController extends GetxController {
   final LabAnalysisService _labAnalysisService;
   final ImagePicker _imagePicker;
   static const int _maxDocumentBytes = 500 * 1024;
+  static const String _trialUsageAnalysisDeviceKey =
+      'trial_usage_analysis_device';
+  static const String _trialUsageSaveDeviceKey = 'trial_usage_save_device';
 
   late final StreamSubscription<User?> _authSubscription;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
   _analysisHistorySubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+  _subscriptionStatusSubscription;
 
   Map<String, int> get trialUsage => <String, int>{
     'profile_trial_lab_result_analysis'.tr: analysisTrialRemaining,
@@ -120,9 +126,10 @@ class HomeController extends GetxController {
     return remaining > 0 ? remaining : 0;
   }
 
-  bool get canAnalyzeWithTrial => analysisTrialRemaining > 0;
+  bool get canAnalyzeWithTrial =>
+      isPremiumUser.value || analysisTrialRemaining > 0;
 
-  bool get canSaveWithTrial => saveTrialRemaining > 0;
+  bool get canSaveWithTrial => isPremiumUser.value || saveTrialRemaining > 0;
 
   String get userName {
     final user = currentUser.value;
@@ -158,18 +165,54 @@ class HomeController extends GetxController {
     currentUser.value = FirebaseAuth.instance.currentUser;
     _loadTrialUsageForUser(currentUser.value?.uid);
     _bindAnalysisHistoryStream(currentUser.value?.uid);
+    _bindSubscriptionStatusStream(currentUser.value?.uid);
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
       currentUser.value = user;
       _loadTrialUsageForUser(user?.uid);
       _bindAnalysisHistoryStream(user?.uid);
+      _bindSubscriptionStatusStream(user?.uid);
     });
   }
 
   @override
   void onClose() {
     _analysisHistorySubscription?.cancel();
+    _subscriptionStatusSubscription?.cancel();
     _authSubscription.cancel();
     super.onClose();
+  }
+
+  void _bindSubscriptionStatusStream(String? uid) {
+    _subscriptionStatusSubscription?.cancel();
+
+    if (uid == null || uid.isEmpty) {
+      isPremiumUser.value = false;
+      return;
+    }
+
+    _subscriptionStatusSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('meta')
+        .doc('subscription')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            if (!snapshot.exists) {
+              isPremiumUser.value = false;
+              return;
+            }
+
+            final data = snapshot.data() ?? const <String, dynamic>{};
+            final isPremium = data['isPremium'] == true;
+            final status = (data['status'] ?? '').toString().toLowerCase();
+            isPremiumUser.value =
+                isPremium || status == 'active' || status == 'trialing';
+          },
+          onError: (_) {
+            isPremiumUser.value = false;
+          },
+        );
   }
 
   void _bindAnalysisHistoryStream(String? uid) {
@@ -468,7 +511,7 @@ class HomeController extends GetxController {
     } catch (_) {}
   }
 
-  String _trialUsageKey(String metric, String? uid) {
+  String _legacyTrialUsageKey(String metric, String? uid) {
     final owner = (uid ?? 'guest').trim();
     return 'trial_usage_${metric}_$owner';
   }
@@ -476,22 +519,106 @@ class HomeController extends GetxController {
   Future<void> _loadTrialUsageForUser(String? uid) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      usedAnalysisFreeTrial.value =
-          prefs.getInt(_trialUsageKey('analysis', uid)) ?? 0;
-      usedSaveAnalysisResultFreeTrial.value =
-          prefs.getInt(_trialUsageKey('save', uid)) ?? 0;
+
+      final deviceAnalysis = prefs.getInt(_trialUsageAnalysisDeviceKey) ?? 0;
+      final deviceSave = prefs.getInt(_trialUsageSaveDeviceKey) ?? 0;
+
+      final legacyAnalysisByUid =
+          prefs.getInt(_legacyTrialUsageKey('analysis', uid)) ?? 0;
+      final legacyAnalysisGuest =
+          prefs.getInt(_legacyTrialUsageKey('analysis', null)) ?? 0;
+      final mergedAnalysis = [
+        deviceAnalysis,
+        legacyAnalysisByUid,
+        legacyAnalysisGuest,
+      ].reduce((a, b) => a > b ? a : b);
+
+      final legacySaveByUid =
+          prefs.getInt(_legacyTrialUsageKey('save', uid)) ?? 0;
+      final legacySaveGuest =
+          prefs.getInt(_legacyTrialUsageKey('save', null)) ?? 0;
+      final mergedSave = [
+        deviceSave,
+        legacySaveByUid,
+        legacySaveGuest,
+      ].reduce((a, b) => a > b ? a : b);
+
+      await prefs.setInt(_trialUsageAnalysisDeviceKey, mergedAnalysis);
+      await prefs.setInt(_trialUsageSaveDeviceKey, mergedSave);
+
+      var finalAnalysis = mergedAnalysis;
+      var finalSave = mergedSave;
+
+      if (uid != null && uid.trim().isNotEmpty) {
+        final cloudUsage = await _loadTrialUsageFromCloud(uid);
+        finalAnalysis = [
+          finalAnalysis,
+          cloudUsage.analysis,
+        ].reduce((a, b) => a > b ? a : b);
+        finalSave = [
+          finalSave,
+          cloudUsage.save,
+        ].reduce((a, b) => a > b ? a : b);
+
+        await prefs.setInt(_trialUsageAnalysisDeviceKey, finalAnalysis);
+        await prefs.setInt(_trialUsageSaveDeviceKey, finalSave);
+
+        await _saveTrialUsageToCloud(
+          uid: uid,
+          analysis: finalAnalysis,
+          save: finalSave,
+        );
+      }
+
+      usedAnalysisFreeTrial.value = finalAnalysis;
+      usedSaveAnalysisResultFreeTrial.value = finalSave;
     } catch (_) {
       usedAnalysisFreeTrial.value = 0;
       usedSaveAnalysisResultFreeTrial.value = 0;
     }
   }
 
-  Future<void> _increaseTrialUsage({
-    required String metric,
-    required String? uid,
+  Future<({int analysis, int save})> _loadTrialUsageFromCloud(
+    String uid,
+  ) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('meta')
+          .doc('trial_usage')
+          .get();
+      final data = doc.data();
+      final analysis = (data?['analysisUsed'] as num?)?.toInt() ?? 0;
+      final save = (data?['saveUsed'] as num?)?.toInt() ?? 0;
+      return (analysis: analysis, save: save);
+    } catch (_) {
+      return (analysis: 0, save: 0);
+    }
+  }
+
+  Future<void> _saveTrialUsageToCloud({
+    required String uid,
+    required int analysis,
+    required int save,
   }) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('meta')
+        .doc('trial_usage')
+        .set({
+          'analysisUsed': analysis,
+          'saveUsed': save,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+  }
+
+  Future<void> _increaseTrialUsage({required String metric}) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _trialUsageKey(metric, uid);
+    final key = metric == 'analysis'
+        ? _trialUsageAnalysisDeviceKey
+        : _trialUsageSaveDeviceKey;
     final current = prefs.getInt(key) ?? 0;
     final next = current + 1;
     await prefs.setInt(key, next);
@@ -500,6 +627,17 @@ class HomeController extends GetxController {
       usedAnalysisFreeTrial.value = next;
     } else if (metric == 'save') {
       usedSaveAnalysisResultFreeTrial.value = next;
+    }
+
+    final user = currentUser.value;
+    if (user != null && !user.isAnonymous) {
+      try {
+        await _saveTrialUsageToCloud(
+          uid: user.uid,
+          analysis: usedAnalysisFreeTrial.value,
+          save: usedSaveAnalysisResultFreeTrial.value,
+        );
+      } catch (_) {}
     }
   }
 
@@ -666,10 +804,7 @@ class HomeController extends GetxController {
         status: status,
       );
       isCurrentAnalysisSaved.value = false;
-      await _increaseTrialUsage(
-        metric: 'analysis',
-        uid: currentUser.value?.uid,
-      );
+      await _increaseTrialUsage(metric: 'analysis');
     } catch (_) {
       _showAppSnackbar(
         'home_analyze_failed_title'.tr,
@@ -735,7 +870,7 @@ class HomeController extends GetxController {
           });
 
       isCurrentAnalysisSaved.value = true;
-      await _increaseTrialUsage(metric: 'save', uid: user.uid);
+      await _increaseTrialUsage(metric: 'save');
       return true;
     } catch (_) {
       _showAppSnackbar(
@@ -934,11 +1069,7 @@ class HomeController extends GetxController {
   }
 
   void restorePurchases() {
-    _showAppSnackbar(
-      'profile_restore_info_title'.tr,
-      'profile_restore_info_message'.tr,
-      icon: Icons.info_outline,
-    );
+    Get.to<void>(() => const PremiumUpgradeView(autoRestoreOnOpen: true));
   }
 
   Future<void> deleteAccount() async {
@@ -1101,7 +1232,11 @@ class HomeController extends GetxController {
           break;
       }
     } on FirebaseAuthException catch (error) {
-      _showAuthError(error, fallbackTitle: 'profile_link_apple_failed_title');
+      _showAuthError(
+        error,
+        fallbackTitle: 'profile_link_apple_failed_title',
+        includeErrorCode: true,
+      );
     } catch (_) {
       _showAppSnackbar(
         'profile_link_apple_failed_title'.tr,
@@ -1116,15 +1251,30 @@ class HomeController extends GetxController {
   void _showAuthError(
     FirebaseAuthException error, {
     required String fallbackTitle,
+    bool includeErrorCode = false,
   }) {
     final message = switch (error.code) {
       'account-exists-with-different-credential' =>
         'profile_auth_error_different_credential'.tr,
       'invalid-credential' => 'profile_auth_error_invalid_credential'.tr,
+      'apple_missing_identity_token' => 'profile_auth_error_apple_setup'.tr,
+      'apple_invalid_response' ||
+      'apple_not_handled' ||
+      'apple_not_interactive' ||
+      'apple_failed' ||
+      'apple_unknown' => 'profile_auth_error_apple_invalid'.tr,
       _ => 'profile_auth_error_generic'.tr,
     };
 
-    _showAppSnackbar(fallbackTitle.tr, message, icon: Icons.error_outline);
+    final displayMessage = includeErrorCode
+        ? '$message (${error.code})'
+        : message;
+
+    _showAppSnackbar(
+      fallbackTitle.tr,
+      displayMessage,
+      icon: Icons.error_outline,
+    );
   }
 
   void startLabUpload() {

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Fitscript Ai</string>
+	<string>FitScript AI</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -47,12 +47,11 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>FitScript AI needs camera access so you can snap a photo of your physical lab reports for instant AI analysis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow access to your photos to upload screenshots or saved images of your medical reports.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Allow access to your files to select and process your official PDF lab reports.</string>
 </dict>
 </plist>

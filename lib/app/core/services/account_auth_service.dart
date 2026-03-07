@@ -61,9 +61,18 @@ class AccountAuthService {
         nonce: nonce,
       );
 
+      final identityToken = appleCredential.identityToken;
+      if (identityToken == null || identityToken.trim().isEmpty) {
+        throw FirebaseAuthException(
+          code: 'apple_missing_identity_token',
+          message:
+              'Apple did not return a valid identity token. Please verify Apple Sign In setup.',
+        );
+      }
+
       final oauthCredential = OAuthProvider(
         'apple.com',
-      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
+      ).credential(idToken: identityToken, rawNonce: rawNonce);
 
       return _linkOrSignIn(oauthCredential, providerName: 'Apple');
     } on SignInWithAppleAuthorizationException catch (error) {
@@ -73,7 +82,18 @@ class AccountAuthService {
           providerName: 'Apple',
         );
       }
-      rethrow;
+
+      final mappedCode = switch (error.code) {
+        AuthorizationErrorCode.invalidResponse => 'apple_invalid_response',
+        AuthorizationErrorCode.notHandled => 'apple_not_handled',
+        AuthorizationErrorCode.notInteractive => 'apple_not_interactive',
+        AuthorizationErrorCode.failed => 'apple_failed',
+        AuthorizationErrorCode.unknown => 'apple_unknown',
+        AuthorizationErrorCode.canceled => 'apple_cancelled',
+        _ => 'apple_unknown',
+      };
+
+      throw FirebaseAuthException(code: mappedCode, message: error.message);
     }
   }
 
@@ -203,17 +223,33 @@ class AccountAuthService {
           scopes: [AppleIDAuthorizationScopes.email],
           nonce: nonce,
         );
-        final credential = OAuthProvider('apple.com').credential(
-          idToken: appleCredential.identityToken,
-          rawNonce: rawNonce,
-        );
+        final identityToken = appleCredential.identityToken;
+        if (identityToken == null || identityToken.trim().isEmpty) {
+          throw FirebaseAuthException(
+            code: 'apple_missing_identity_token',
+            message:
+                'Apple did not return a valid identity token. Please verify Apple Sign In setup.',
+          );
+        }
+        final credential = OAuthProvider(
+          'apple.com',
+        ).credential(idToken: identityToken, rawNonce: rawNonce);
         await user.reauthenticateWithCredential(credential);
         return true;
       } on SignInWithAppleAuthorizationException catch (error) {
         if (error.code == AuthorizationErrorCode.canceled) {
           return null;
         }
-        rethrow;
+        final mappedCode = switch (error.code) {
+          AuthorizationErrorCode.invalidResponse => 'apple_invalid_response',
+          AuthorizationErrorCode.notHandled => 'apple_not_handled',
+          AuthorizationErrorCode.notInteractive => 'apple_not_interactive',
+          AuthorizationErrorCode.failed => 'apple_failed',
+          AuthorizationErrorCode.unknown => 'apple_unknown',
+          AuthorizationErrorCode.canceled => 'apple_cancelled',
+          _ => 'apple_unknown',
+        };
+        throw FirebaseAuthException(code: mappedCode, message: error.message);
       }
     }
 

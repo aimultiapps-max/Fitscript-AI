@@ -618,6 +618,7 @@ class _ProfilePage extends StatelessWidget {
           final isLinkingApple = controller.isLinkingApple.value;
           final isAnyLinking = isLinkingGoogle || isLinkingApple;
           final isDeleting = controller.isDeletingAccount.value;
+          final isPremium = controller.isPremiumUser.value;
 
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -642,14 +643,18 @@ class _ProfilePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'profile_subscription_free_plan'.tr,
+                      isPremium
+                          ? 'profile_subscription_premium_plan'.tr
+                          : 'profile_subscription_free_plan'.tr,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'profile_subscription_description'.tr,
+                      isPremium
+                          ? 'profile_subscription_premium_description'.tr
+                          : 'profile_subscription_description'.tr,
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
@@ -728,29 +733,35 @@ class _ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    ...controller.trialUsage.entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                entry.key,
-                                style: theme.textTheme.bodyMedium,
+                    if (isPremium)
+                      Text(
+                        'profile_trial_unlimited_message'.tr,
+                        style: theme.textTheme.bodyMedium,
+                      )
+                    else
+                      ...controller.trialUsage.entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  entry.key,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'profile_trial_left'.trParams({
-                                'count': '${entry.value}',
-                              }),
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
+                              Text(
+                                'profile_trial_left'.trParams({
+                                  'count': '${entry.value}',
+                                }),
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
