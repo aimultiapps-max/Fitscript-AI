@@ -5,6 +5,8 @@ class AppTranslations extends Translations {
   Map<String, Map<String, String>> get keys => {
     'en_US': {
       'onboarding_skip': 'Skip',
+      'onboarding_previous': 'Previous',
+      'onboarding_next': 'Next',
       'onboarding_done': 'Get Started',
       'onboarding_welcome_title': 'Welcome to FitScript AI',
       'onboarding_welcome_body':
@@ -54,6 +56,15 @@ class AppTranslations extends Translations {
       'history_empty_title': 'No analysis history yet',
       'history_empty_subtitle':
           'Your uploaded lab analysis results will appear here.',
+      'history_delete_confirm_title': 'Delete history?',
+      'history_delete_confirm_message':
+          'The analysis "@title" will be removed from your history.',
+      'history_delete_success_title': 'History deleted',
+      'history_delete_success_message':
+          'The analysis has been removed from your history.',
+      'history_delete_failed_title': 'Delete failed',
+      'history_delete_failed_message':
+          'Unable to delete history right now. Please try again.',
       'history_unknown_title': 'Lab Analysis',
       'history_unknown_note': 'No summary available.',
       'history_sample_1_title': 'Complete blood count',
@@ -76,14 +87,27 @@ class AppTranslations extends Translations {
       'home_selected_document': 'Selected lab document',
       'home_analyze_button': 'Analyze with AI',
       'home_analyzing_button': 'Analyzing...',
+      'home_analyze_trial_exhausted_button': 'Free Trial Ended',
       'home_analysis_result_title': 'AI Analysis Result',
-    'home_analysis_findings_label': 'Key findings',
+      'home_analysis_findings_label': 'Key findings',
       'home_analysis_recommendation_label': 'Recommendation',
-    'home_analysis_next_steps_label': 'Next steps',
+      'home_analysis_next_steps_label': 'Next steps',
       'home_save_analysis_button': 'Save Analysis Result',
       'home_saving_analysis_button': 'Saving...',
+      'home_saved_analysis_button': 'Already Saved',
+      'home_save_trial_exhausted_button': 'Free Trial Ended',
       'home_saved_title': 'Analysis saved',
       'home_saved_message': 'Analysis result has been added to your history.',
+      'home_saved_dialog_title': 'Saved successfully',
+      'home_saved_dialog_message':
+          'Your analysis has been stored and is ready to review in History.',
+      'home_saved_dialog_open_history': 'Open History',
+      'home_trial_analysis_limit_title': 'Free trial limit reached',
+      'home_trial_analysis_limit_message':
+          'You have used all @max free analysis attempts.',
+      'home_trial_save_limit_title': 'Free trial limit reached',
+      'home_trial_save_limit_message':
+          'You have used all @max free save attempts.',
       'home_pick_failed_title': 'Image selection failed',
       'home_pick_failed_message':
           'Unable to read the selected image. Please try again.',
@@ -173,12 +197,41 @@ class AppTranslations extends Translations {
       'profile_upgrade_button': 'Upgrade to Premium',
       'profile_restore_button': 'Restore Purchases',
       'profile_sign_out_button': 'Sign Out',
+      'profile_sign_out_confirm_title': 'Sign out now?',
+      'profile_sign_out_confirm_message':
+          'You will continue as a guest account on this device.',
       'profile_sign_out_failed_title': 'Sign out failed',
       'profile_sign_out_failed_message':
           'There was a problem signing out. Please try again.',
       'profile_upgrade_info_title': 'Upgrade to Premium',
       'profile_upgrade_info_message':
           'Premium upgrade flow will be available in a future release.',
+      'premium_title': 'Upgrade to Premium',
+      'premium_plan_name': 'Premium (FitScript Pro)',
+      'premium_subtitle':
+          'Unlock full capabilities for families and long-term health monitoring.',
+      'premium_feature_scan_title': 'Unlimited Scanning',
+      'premium_feature_scan_subtitle':
+          'Ideal for families or seniors with many lab reports.',
+      'premium_feature_insight_title': 'Deep Insight',
+      'premium_feature_insight_subtitle':
+          'AI explains results and gives detailed nutrition and workout guidance.',
+      'premium_feature_trend_title': 'Trend Analysis',
+      'premium_feature_trend_subtitle':
+          'Compare lab results over time, such as cholesterol progress across 1 year.',
+      'premium_feature_export_title': 'Export to PDF',
+      'premium_feature_export_subtitle':
+          'Generate a neat summary report to bring to your doctor.',
+      'premium_pricing_title': 'Pricing (Dynamic by region)',
+      'premium_pricing_market_id': 'Indonesia',
+      'premium_pricing_market_global': 'Global',
+      'premium_price_id_monthly': 'Rp 29.000 / month',
+      'premium_price_id_yearly': 'Rp 199.000 / year',
+      'premium_price_global_monthly': '\$4.99 / month',
+      'premium_price_global_yearly': '\$39.99 / year',
+      'premium_pricing_note':
+          'Displayed package can adapt to your locale and app store region.',
+      'premium_cta_upgrade': 'Upgrade Now',
       'profile_restore_info_title': 'Restore Purchases',
       'profile_restore_info_message':
           'Purchase restoration is not available in this version yet.',
@@ -241,6 +294,8 @@ class AppTranslations extends Translations {
     },
     'id_ID': {
       'onboarding_skip': 'Lewati',
+      'onboarding_previous': 'Sebelumnya',
+      'onboarding_next': 'Lanjut',
       'onboarding_done': 'Mulai',
       'onboarding_welcome_title': 'Selamat Datang di FitScript AI',
       'onboarding_welcome_body':
@@ -287,6 +342,15 @@ class AppTranslations extends Translations {
       'history_empty_title': 'Belum ada riwayat analisis',
       'history_empty_subtitle':
           'Hasil analisis dari upload lab Anda akan muncul di sini.',
+      'history_delete_confirm_title': 'Hapus riwayat?',
+      'history_delete_confirm_message':
+          'Analisis "@title" akan dihapus dari riwayat Anda.',
+      'history_delete_success_title': 'Riwayat dihapus',
+      'history_delete_success_message':
+          'Analisis berhasil dihapus dari riwayat Anda.',
+      'history_delete_failed_title': 'Gagal menghapus',
+      'history_delete_failed_message':
+          'Tidak dapat menghapus riwayat saat ini. Silakan coba lagi.',
       'history_unknown_title': 'Analisis Hasil Lab',
       'history_unknown_note': 'Ringkasan belum tersedia.',
       'history_sample_1_title': 'Pemeriksaan darah lengkap',
@@ -309,14 +373,27 @@ class AppTranslations extends Translations {
       'home_selected_document': 'Dokumen lab terpilih',
       'home_analyze_button': 'Analisis dengan AI',
       'home_analyzing_button': 'Menganalisis...',
+      'home_analyze_trial_exhausted_button': 'Free Trial Habis',
       'home_analysis_result_title': 'Hasil Analisis AI',
-    'home_analysis_findings_label': 'Temuan utama',
+      'home_analysis_findings_label': 'Temuan utama',
       'home_analysis_recommendation_label': 'Rekomendasi',
-    'home_analysis_next_steps_label': 'Langkah selanjutnya',
+      'home_analysis_next_steps_label': 'Langkah selanjutnya',
       'home_save_analysis_button': 'Simpan Hasil Analisis',
       'home_saving_analysis_button': 'Menyimpan...',
+      'home_saved_analysis_button': 'Sudah Disimpan',
+      'home_save_trial_exhausted_button': 'Free Trial Habis',
       'home_saved_title': 'Analisis tersimpan',
       'home_saved_message': 'Hasil analisis telah ditambahkan ke riwayat Anda.',
+      'home_saved_dialog_title': 'Berhasil disimpan',
+      'home_saved_dialog_message':
+          'Hasil analisis Anda sudah tersimpan dan siap dilihat kembali di Riwayat.',
+      'home_saved_dialog_open_history': 'Buka Riwayat',
+      'home_trial_analysis_limit_title': 'Batas free trial tercapai',
+      'home_trial_analysis_limit_message':
+          'Anda sudah menggunakan semua @max kali analisis gratis.',
+      'home_trial_save_limit_title': 'Batas free trial tercapai',
+      'home_trial_save_limit_message':
+          'Anda sudah menggunakan semua @max kali simpan gratis.',
       'home_pick_failed_title': 'Gagal memilih gambar',
       'home_pick_failed_message':
           'Tidak dapat membaca gambar yang dipilih. Coba lagi.',
@@ -405,12 +482,41 @@ class AppTranslations extends Translations {
       'profile_upgrade_button': 'Upgrade ke Premium',
       'profile_restore_button': 'Pulihkan Pembelian',
       'profile_sign_out_button': 'Keluar',
+      'profile_sign_out_confirm_title': 'Keluar sekarang?',
+      'profile_sign_out_confirm_message':
+          'Anda akan melanjutkan sebagai akun tamu di perangkat ini.',
       'profile_sign_out_failed_title': 'Gagal keluar',
       'profile_sign_out_failed_message':
           'Terjadi kendala saat mencoba keluar akun. Coba lagi.',
       'profile_upgrade_info_title': 'Upgrade ke Premium',
       'profile_upgrade_info_message':
           'Alur upgrade premium akan tersedia di versi berikutnya.',
+      'premium_title': 'Upgrade ke Premium',
+      'premium_plan_name': 'Premium (FitScript Pro)',
+      'premium_subtitle':
+          'Buka semua kemampuan untuk keluarga dan pemantauan kesehatan jangka panjang.',
+      'premium_feature_scan_title': 'Unlimited Scanning',
+      'premium_feature_scan_subtitle':
+          'Cocok untuk keluarga atau lansia dengan banyak laporan.',
+      'premium_feature_insight_title': 'Deep Insight',
+      'premium_feature_insight_subtitle':
+          'AI tidak hanya menjelaskan, tetapi memberi saran nutrisi dan olahraga yang sangat mendetail.',
+      'premium_feature_trend_title': 'Trend Analysis',
+      'premium_feature_trend_subtitle':
+          'Grafik perbandingan hasil lab dari waktu ke waktu, misalnya progres kolesterol selama 1 tahun.',
+      'premium_feature_export_title': 'Export to PDF',
+      'premium_feature_export_subtitle':
+          'Laporan rangkuman rapi yang siap dibawa ke dokter.',
+      'premium_pricing_title': 'Harga (Dynamic Pricing)',
+      'premium_pricing_market_id': 'Indonesia',
+      'premium_pricing_market_global': 'Global',
+      'premium_price_id_monthly': 'Rp 29.000 / bulan',
+      'premium_price_id_yearly': 'Rp 199.000 / tahun',
+      'premium_price_global_monthly': '\$4.99 / bulan',
+      'premium_price_global_yearly': '\$39.99 / tahun',
+      'premium_pricing_note':
+          'Paket yang ditampilkan dapat menyesuaikan locale dan region app store Anda.',
+      'premium_cta_upgrade': 'Upgrade Sekarang',
       'profile_restore_info_title': 'Pulihkan Pembelian',
       'profile_restore_info_message':
           'Pemulihan pembelian belum tersedia pada versi ini.',

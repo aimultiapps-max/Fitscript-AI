@@ -1,5 +1,6 @@
+import 'dart:ui';
+
 import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
-import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,12 +9,6 @@ import '../controllers/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
-
-  static const _androidNavIcons = <IconData>[
-    Icons.home_outlined,
-    Icons.history_outlined,
-    Icons.person_outline,
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -27,24 +22,23 @@ class HomeView extends GetView<HomeController> {
 
       if (isIOS) {
         return AdaptiveScaffold(
-          // appBar: AdaptiveAppBar(title: title),
           bottomNavigationBar: AdaptiveBottomNavigationBar(
             selectedIndex: currentIndex,
             onTap: controller.onTabChanged,
             items: [
               AdaptiveNavigationDestination(
-                icon: Icons.home_outlined,
-                selectedIcon: Icons.home,
+                icon: 'house',
+                selectedIcon: 'house.fill',
                 label: 'nav_home'.tr,
               ),
               AdaptiveNavigationDestination(
-                icon: Icons.history_outlined,
-                selectedIcon: Icons.history,
+                icon: 'clock.arrow.circlepath',
+                selectedIcon: 'clock.arrow.circlepath',
                 label: 'nav_history'.tr,
               ),
               AdaptiveNavigationDestination(
-                icon: Icons.person_outline,
-                selectedIcon: Icons.person,
+                icon: 'person',
+                selectedIcon: 'person.fill',
                 label: 'nav_account'.tr,
               ),
             ],
@@ -57,15 +51,28 @@ class HomeView extends GetView<HomeController> {
       return Scaffold(
         appBar: AppBar(title: Text(title)),
         body: IndexedStack(index: currentIndex, children: pages),
-        bottomNavigationBar: AnimatedBottomNavigationBar(
-          icons: _androidNavIcons,
-          activeIndex: currentIndex,
-          onTap: controller.onTabChanged,
-          gapLocation: GapLocation.end,
-          backgroundColor: theme.colorScheme.surface,
-          activeColor: theme.colorScheme.primary,
-          inactiveColor: theme.colorScheme.onSurfaceVariant,
-          splashColor: theme.colorScheme.primaryContainer,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: currentIndex,
+          onDestinationSelected: controller.onTabChanged,
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          indicatorColor: theme.colorScheme.primaryContainer,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: 'nav_home'.tr,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.history_outlined),
+              selectedIcon: const Icon(Icons.history),
+              label: 'nav_history'.tr,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: 'nav_account'.tr,
+            ),
+          ],
         ),
       );
     });
@@ -99,11 +106,10 @@ class _HistoryPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             children: [
               Card(
-                elevation: 0,
+                elevation: 2,
                 color: theme.colorScheme.surfaceContainer,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: theme.colorScheme.outlineVariant),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -183,11 +189,10 @@ class _HistoryPage extends StatelessWidget {
               else if (histories.isEmpty)
                 Card(
                   margin: EdgeInsets.zero,
-                  elevation: 0,
+                  elevation: 2,
                   color: theme.colorScheme.surfaceContainer,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
-                    side: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -223,7 +228,8 @@ class _HistoryPage extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _HistoryRecordCard(
                       history: history,
-                      onTap: () => controller.openHistoryDetail(history),
+                      onTap: () => _showHistoryDetail(context, history),
+                      onDelete: () => _confirmDeleteHistory(context, history),
                     ),
                   ),
                 ),
@@ -233,13 +239,294 @@ class _HistoryPage extends StatelessWidget {
       ),
     );
   }
+
+  void _showHistoryDetail(BuildContext context, LabHistoryItem history) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      // backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          bottom: false,
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: [
+                Align(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        history.title,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    _StatusChip(status: history.status),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(history.date, style: theme.textTheme.bodySmall),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                  child: Text(
+                    history.summary,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (history.signals.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'home_analysis_findings_label'.tr,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: history.signals
+                        .map(
+                          (signal) => Chip(
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor:
+                                theme.colorScheme.secondaryContainer,
+                            label: Text(
+                              _formatSignal(signal),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: theme.colorScheme.secondaryContainer,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'home_analysis_recommendation_label'.tr,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        history.recommendation,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (history.nextSteps.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: theme.colorScheme.tertiaryContainer,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'home_analysis_next_steps_label'.tr,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ...history.nextSteps.map(
+                          (step) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '• $step',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onTertiaryContainer,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteHistory(
+    BuildContext context,
+    LabHistoryItem history,
+  ) async {
+    final theme = Theme.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          title: Text('history_delete_confirm_title'.tr),
+          content: Text(
+            'history_delete_confirm_message'.trParams({'title': history.title}),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.onSurfaceVariant,
+              ),
+              child: Text('profile_cancel'.tr),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
+              child: Text('profile_delete_button'.tr),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+    final isDeleted = await controller.deleteHistoryItem(history);
+    if (!isDeleted || !context.mounted) return;
+    Get.snackbar(
+      'history_delete_success_title'.tr,
+      'history_delete_success_message'.tr,
+      snackStyle: SnackStyle.FLOATING,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      borderRadius: 16,
+      duration: const Duration(milliseconds: 2200),
+      isDismissible: true,
+      shouldIconPulse: false,
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      colorText: theme.colorScheme.onSurface,
+      icon: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.check_rounded,
+          size: 18,
+          color: theme.colorScheme.onPrimaryContainer,
+        ),
+      ),
+      titleText: Text(
+        'history_delete_success_title'.tr,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+      messageText: Text(
+        'history_delete_success_message'.tr,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          height: 1.3,
+        ),
+      ),
+      boxShadows: [
+        BoxShadow(
+          color: theme.colorScheme.shadow.withValues(alpha: 0.16),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    );
+  }
+
+  String _formatSignal(String raw) {
+    final cleaned = raw.trim().replaceAll(RegExp(r'[_\-]+'), ' ');
+    if (cleaned.isEmpty) return raw;
+    return cleaned
+        .split(RegExp(r'\s+'))
+        .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
+        .join(' ');
+  }
 }
 
 class _HistoryRecordCard extends StatelessWidget {
-  const _HistoryRecordCard({required this.history, required this.onTap});
+  const _HistoryRecordCard({
+    required this.history,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   final LabHistoryItem history;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -247,11 +534,13 @@ class _HistoryRecordCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      elevation: 0,
+      elevation: 2,
       color: theme.colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -272,6 +561,15 @@ class _HistoryRecordCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'profile_delete_button'.tr,
+                    onPressed: onDelete,
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
                   _StatusChip(status: history.status),
                 ],
               ),
@@ -481,43 +779,47 @@ class _ProfilePage extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              _ProfileSectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'profile_danger_zone'.tr,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'profile_danger_zone_description'.tr,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: isDeleting ? null : controller.deleteAccount,
-                        icon: const Icon(Icons.delete_outline),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.colorScheme.error,
-                          side: BorderSide(color: theme.colorScheme.error),
-                        ),
-                        label: Text(
-                          isDeleting
-                              ? 'profile_deleting'.tr
-                              : 'profile_delete_button'.tr,
+              if (!isAnonymous) ...[
+                const SizedBox(height: 12),
+                _ProfileSectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'profile_danger_zone'.tr,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.error,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'profile_danger_zone_description'.tr,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: isDeleting
+                              ? null
+                              : controller.deleteAccount,
+                          icon: const Icon(Icons.delete_outline),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.error,
+                            side: BorderSide(color: theme.colorScheme.error),
+                          ),
+                          label: Text(
+                            isDeleting
+                                ? 'profile_deleting'.tr
+                                : 'profile_delete_button'.tr,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 12),
               _ProfileSectionCard(
                 child: Column(
@@ -537,14 +839,16 @@ class _ProfilePage extends StatelessWidget {
                         child: Text('profile_restore_button'.tr),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: controller.signOut,
-                        child: Text('profile_sign_out_button'.tr),
+                    if (!isAnonymous) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: controller.signOut,
+                          child: Text('profile_sign_out_button'.tr),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -556,8 +860,14 @@ class _ProfilePage extends StatelessWidget {
   }
 
   void _showLanguagePicker(BuildContext context) {
+    final theme = Theme.of(context);
     showModalBottomSheet<void>(
       context: context,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surfaceContainer,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Obx(() {
@@ -566,25 +876,81 @@ class _ProfilePage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.language),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: theme.colorScheme.surfaceContainerHighest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.language,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                   title: Text('profile_language_english'.tr),
-                  trailing: selected == 'en' ? const Icon(Icons.check) : null,
+                  trailing: selected == 'en'
+                      ? Icon(
+                          Icons.check_circle,
+                          color: theme.colorScheme.primary,
+                        )
+                      : Icon(
+                          Icons.chevron_right,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                   onTap: () async {
                     Navigator.of(context).pop();
                     await controller.changeLanguage('en');
                   },
                 ),
+                const SizedBox(height: 8),
                 ListTile(
-                  leading: const Icon(Icons.language),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: theme.colorScheme.surfaceContainerHighest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.language,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
                   title: Text('profile_language_indonesian'.tr),
-                  trailing: selected == 'id' ? const Icon(Icons.check) : null,
+                  trailing: selected == 'id'
+                      ? Icon(
+                          Icons.check_circle,
+                          color: theme.colorScheme.primary,
+                        )
+                      : Icon(
+                          Icons.chevron_right,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                   onTap: () async {
                     Navigator.of(context).pop();
                     await controller.changeLanguage('id');
                   },
                 ),
+                const SizedBox(height: 8),
                 ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: theme.colorScheme.tertiaryContainer.withValues(
+                    alpha: 0.62,
+                  ),
                   title: Text('profile_close'.tr, textAlign: TextAlign.center),
+                  trailing: Icon(
+                    Icons.close_rounded,
+                    color: theme.colorScheme.onTertiaryContainer,
+                  ),
                   onTap: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -640,186 +1006,231 @@ class _ProfileActionTile extends StatelessWidget {
   }
 }
 
-class _HomeMainContent extends StatelessWidget {
+class _HomeMainContent extends StatefulWidget {
   const _HomeMainContent({required this.controller});
 
   final HomeController controller;
 
   @override
+  State<_HomeMainContent> createState() => _HomeMainContentState();
+}
+
+class _HomeMainContentState extends State<_HomeMainContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _microAnimationController =
+      AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1500),
+      )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _microAnimationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
+      bottom: false,
       child: Material(
         color: Colors.transparent,
         child: Obx(() {
           final theme = Theme.of(context);
-          final imageBytes = controller.selectedLabImageBytes.value;
-          final fileName = controller.selectedLabImageName.value;
-          final isPdf = controller.isSelectedFilePdf;
-          final isCompressed = controller.isSelectedLabFileCompressed.value;
-          final fileSizeLabel = controller.selectedFileSizeLabel;
-          final originalSizeLabel = controller.selectedOriginalFileSizeLabel;
-          final pending = controller.pendingAnalysis.value;
-          final isPreparingDocument = controller.isPreparingDocument.value;
-          final isAnalyzing = controller.isAnalyzingLabImage.value;
-          final isSaving = controller.isSavingAnalysis.value;
+          final imageBytes = widget.controller.selectedLabImageBytes.value;
+          final fileName = widget.controller.selectedLabImageName.value;
+          final isPdf = widget.controller.isSelectedFilePdf;
+          final isCompressed =
+              widget.controller.isSelectedLabFileCompressed.value;
+          final fileSizeLabel = widget.controller.selectedFileSizeLabel;
+          final originalSizeLabel =
+              widget.controller.selectedOriginalFileSizeLabel;
+          final pending = widget.controller.pendingAnalysis.value;
+          final isPreparingDocument =
+              widget.controller.isPreparingDocument.value;
+          final isAnalyzing = widget.controller.isAnalyzingLabImage.value;
+          final isSaving = widget.controller.isSavingAnalysis.value;
+          final isSaved = widget.controller.isCurrentAnalysisSaved.value;
+          final canAnalyzeWithTrial = widget.controller.canAnalyzeWithTrial;
+          final canSaveWithTrial = widget.controller.canSaveWithTrial;
+          final isAiBusy = isPreparingDocument || isAnalyzing;
+          final panelShape = RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          );
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text(
-                'home_title'.tr,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+              _GlassPanel(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: const [0, 0.55, 1],
+                  colors: [
+                    theme.colorScheme.primaryContainer.withValues(alpha: 0.94),
+                    theme.colorScheme.secondaryContainer.withValues(alpha: 0.9),
+                    theme.colorScheme.tertiaryContainer.withValues(alpha: 0.92),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text('home_subtitle'.tr, style: theme.textTheme.bodyLarge),
-              const SizedBox(height: 16),
-              Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'home_start_analysis_title'.tr,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'home_start_analysis_subtitle'.tr,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: controller.pickLabImageFromCamera,
-                              icon: const Icon(Icons.photo_camera_outlined),
-                              label: Text('home_take_photo_button'.tr),
+                shadowColor: theme.colorScheme.primary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: AnimatedBuilder(
+                        animation: _microAnimationController,
+                        builder: (context, child) {
+                          final scale = isAiBusy
+                              ? 1 + (_microAnimationController.value * 0.06)
+                              : 1.0;
+                          return Transform.scale(
+                            scale: scale,
+                            child: _SmartBadge(
+                              icon: Icons.memory_outlined,
+                              label: 'AI Engine',
+                              background: theme.colorScheme.primaryContainer,
+                              foreground: theme.colorScheme.onPrimaryContainer,
                             ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: controller.pickLabImageFromGallery,
-                              icon: const Icon(Icons.upload_file_outlined),
-                              label: Text('home_pick_gallery_button'.tr),
-                            ),
+                          child: Icon(
+                            Icons.health_and_safety_outlined,
+                            color: theme.colorScheme.onPrimaryContainer,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: controller.pickLabPdfDocument,
-                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                          label: Text('home_pick_pdf_button'.tr),
                         ),
-                      ),
-                      if (isPreparingDocument) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'home_preparing_document'.tr,
-                                style: theme.textTheme.bodySmall?.copyWith(
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'home_title'.tr,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'home_subtitle'.tr,
+                                style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
-                      if (imageBytes != null) ...[
-                        const SizedBox(height: 14),
-                        Text(
-                          'home_selected_document'.tr,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (!isPdf)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.memory(
-                              imageBytes,
-                              height: 180,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        else
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: theme.colorScheme.surfaceContainerHighest,
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.picture_as_pdf_outlined),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    fileName ?? 'lab_result.pdf',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        const SizedBox(height: 8),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                margin: EdgeInsets.zero,
+                elevation: 2,
+                color: theme.colorScheme.surfaceContainer.withValues(
+                  alpha: 0.86,
+                ),
+                shape: panelShape,
+                clipBehavior: Clip.antiAlias,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
                           children: [
-                            Icon(
-                              Icons.straighten_outlined,
-                              size: 16,
-                              color: theme.colorScheme.onSurfaceVariant,
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.cloud_upload_outlined,
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'home_file_size_label'.trParams({
-                                'size': fileSizeLabel,
-                              }),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'home_start_analysis_title'.tr,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        if (isCompressed) ...[
-                          const SizedBox(height: 4),
+                        const SizedBox(height: 10),
+                        Text(
+                          'home_start_analysis_subtitle'.tr,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _FlowPill(
+                              index: 1,
+                              label: 'Upload',
+                              color: theme.colorScheme.primary,
+                            ),
+                            _FlowPill(
+                              index: 2,
+                              label: 'Analyze',
+                              color: theme.colorScheme.secondary,
+                            ),
+                            _FlowPill(
+                              index: 3,
+                              label: 'Save',
+                              color: theme.colorScheme.tertiary,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () => _showUploadOptionsSheet(context),
+                            icon: const Icon(Icons.upload_file_outlined),
+                            label: Text('home_upload_button'.tr),
+                          ),
+                        ),
+                        if (isPreparingDocument) ...[
+                          const SizedBox(height: 10),
                           Row(
                             children: [
-                              Icon(
-                                Icons.compress_outlined,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'home_file_compressed_note'.trParams({
-                                    'before': originalSizeLabel,
-                                    'after': fileSizeLabel,
-                                  }),
+                                  'home_preparing_document'.tr,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -828,152 +1239,385 @@ class _HomeMainContent extends StatelessWidget {
                             ],
                           ),
                         ],
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: (isAnalyzing || isPreparingDocument)
-                                ? null
-                                : controller.analyzeSelectedLabImage,
-                            icon: const Icon(Icons.psychology_alt_outlined),
-                            label: Text(
-                              isPreparingDocument
-                                  ? 'home_preparing_document_short'.tr
-                                  : isAnalyzing
-                                  ? 'home_analyzing_button'.tr
-                                  : 'home_analyze_button'.tr,
+                        _FadeSlideSwitcher(
+                          visible: imageBytes != null,
+                          child: Column(
+                            key: ValueKey<String>(
+                              'doc-preview-${fileName ?? 'none'}-${isPdf ? 'pdf' : 'img'}',
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              if (pending != null) ...[
-                const SizedBox(height: 12),
-                Card(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'home_analysis_result_title'.tr,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                pending.title,
-                                style: theme.textTheme.titleLarge?.copyWith(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 14),
+                              Text(
+                                'home_selected_document'.tr,
+                                style: theme.textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            ),
-                            _StatusChip(status: pending.status),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          pending.summary,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        if (pending.signals.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            'home_analysis_findings_label'.tr,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: pending.signals
-                                .map(
-                                  (signal) => Chip(
-                                    visualDensity: VisualDensity.compact,
-                                    label: Text(
-                                      _formatSignal(signal),
-                                      style: theme.textTheme.bodySmall,
-                                    ),
+                              const SizedBox(height: 8),
+                              if (!isPdf && imageBytes != null)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.memory(
+                                    imageBytes,
+                                    height: 190,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
                                   ),
                                 )
-                                .toList(),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-                        Text(
-                          'home_analysis_recommendation_label'.tr,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          pending.recommendation,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        if (pending.nextSteps.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            'home_analysis_next_steps_label'.tr,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          ...pending.nextSteps.map(
-                            (step) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                '• $step',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: theme
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.picture_as_pdf_outlined),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          fileName ?? 'lab_result.pdf',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _MetaPill(
+                                    icon: Icons.straighten_outlined,
+                                    label: 'home_file_size_label'.trParams({
+                                      'size': fileSizeLabel,
+                                    }),
+                                    backgroundColor:
+                                        theme.colorScheme.primaryContainer,
+                                    foregroundColor:
+                                        theme.colorScheme.onPrimaryContainer,
+                                  ),
+                                  if (isCompressed)
+                                    _MetaPill(
+                                      icon: Icons.compress_outlined,
+                                      label: 'home_file_compressed_note'
+                                          .trParams({
+                                            'before': originalSizeLabel,
+                                            'after': fileSizeLabel,
+                                          }),
+                                      backgroundColor:
+                                          theme.colorScheme.tertiaryContainer,
+                                      foregroundColor:
+                                          theme.colorScheme.onTertiaryContainer,
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed:
+                                      (isAnalyzing ||
+                                          isPreparingDocument ||
+                                          !canAnalyzeWithTrial)
+                                      ? null
+                                      : widget
+                                            .controller
+                                            .analyzeSelectedLabImage,
+                                  icon: const Icon(
+                                    Icons.psychology_alt_outlined,
+                                  ),
+                                  label: Text(
+                                    isPreparingDocument
+                                        ? 'home_preparing_document_short'.tr
+                                        : isAnalyzing
+                                        ? 'home_analyzing_button'.tr
+                                        : !canAnalyzeWithTrial
+                                        ? 'home_analyze_trial_exhausted_button'
+                                              .tr
+                                        : 'home_analyze_button'.tr,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: isSaving
-                                ? null
-                                : controller.saveAnalyzedResult,
-                            child: Text(
-                              isSaving
-                                  ? 'home_saving_analysis_button'.tr
-                                  : 'home_save_analysis_button'.tr,
-                            ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ],
+              ),
+              _FadeSlideSwitcher(
+                visible: pending != null,
+                child: Column(
+                  key: ValueKey<String>(
+                    'pending-analysis-${pending?.title ?? 'none'}',
+                  ),
+                  children: [
+                    const SizedBox(height: 12),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      elevation: 2,
+                      color: theme.colorScheme.surfaceContainer.withValues(
+                        alpha: 0.86,
+                      ),
+                      shape: panelShape,
+                      clipBehavior: Clip.antiAlias,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'home_analysis_result_title'.tr,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      pending?.title ?? '',
+                                      style: theme.textTheme.titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                  _StatusChip(
+                                    status:
+                                        pending?.status ??
+                                        LabHistoryStatus.normal,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              _AiStatusBanner(
+                                status:
+                                    pending?.status ?? LabHistoryStatus.normal,
+                                animation: _microAnimationController,
+                                active: true,
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _AnimatedCountPill(
+                                    icon: Icons.tune_outlined,
+                                    label: 'Signals',
+                                    count:
+                                        (pending?.signals ?? const <String>[])
+                                            .length,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                  _AnimatedCountPill(
+                                    icon: Icons
+                                        .playlist_add_check_circle_outlined,
+                                    label: 'Actions',
+                                    count:
+                                        (pending?.nextSteps ?? const <String>[])
+                                            .length,
+                                    color: theme.colorScheme.tertiary,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                ),
+                                child: Text(
+                                  pending?.summary ?? '',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                              if ((pending?.signals ?? const <String>[])
+                                  .isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  'home_analysis_findings_label'.tr,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children:
+                                      (pending?.signals ?? const <String>[])
+                                          .map(
+                                            (signal) => Chip(
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              backgroundColor: theme
+                                                  .colorScheme
+                                                  .secondaryContainer,
+                                              label: Text(
+                                                _formatSignal(signal),
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                      color: theme
+                                                          .colorScheme
+                                                          .onSecondaryContainer,
+                                                    ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                              ],
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: theme.colorScheme.secondaryContainer,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'home_analysis_recommendation_label'.tr,
+                                      style: theme.textTheme.labelLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      pending?.recommendation ?? '',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSecondaryContainer,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if ((pending?.nextSteps ?? const <String>[])
+                                  .isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: theme.colorScheme.tertiaryContainer,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'home_analysis_next_steps_label'.tr,
+                                        style: theme.textTheme.labelLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      ...(pending?.nextSteps ??
+                                              const <String>[])
+                                          .map(
+                                            (step) => Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 4,
+                                              ),
+                                              child: Text(
+                                                '• $step',
+                                                style: theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      color: theme
+                                                          .colorScheme
+                                                          .onTertiaryContainer,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton(
+                                  onPressed:
+                                      (isSaving || isSaved || !canSaveWithTrial)
+                                      ? null
+                                      : () => _onSaveAnalysisPressed(context),
+                                  child: Text(
+                                    isSaving
+                                        ? 'home_saving_analysis_button'.tr
+                                        : isSaved
+                                        ? 'home_saved_analysis_button'.tr
+                                        : !canSaveWithTrial
+                                        ? 'home_save_trial_exhausted_button'.tr
+                                        : 'home_save_analysis_button'.tr,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 14),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: theme.colorScheme.surfaceContainerHighest,
+                  color: theme.colorScheme.errorContainer.withValues(
+                    alpha: 0.55,
+                  ),
                 ),
-                child: Text(
-                  'home_disclaimer'.tr,
-                  style: theme.textTheme.bodySmall,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'home_disclaimer'.tr,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 8),
@@ -991,6 +1635,198 @@ class _HomeMainContent extends StatelessWidget {
         .split(RegExp(r'\s+'))
         .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
         .join(' ');
+  }
+
+  Future<void> _onSaveAnalysisPressed(BuildContext context) async {
+    final isSaved = await widget.controller.saveAnalyzedResult();
+    if (!isSaved || !context.mounted) return;
+    _showSaveSuccessSnackbar(context);
+  }
+
+  void _showSaveSuccessSnackbar(BuildContext context) {
+    final theme = Theme.of(context);
+    Get.snackbar(
+      'home_saved_dialog_title'.tr,
+      'home_saved_dialog_message'.tr,
+      snackStyle: SnackStyle.FLOATING,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      borderRadius: 16,
+      duration: const Duration(milliseconds: 2500),
+      isDismissible: true,
+      shouldIconPulse: false,
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      colorText: theme.colorScheme.onSurface,
+      icon: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.check_rounded,
+          size: 18,
+          color: theme.colorScheme.onPrimaryContainer,
+        ),
+      ),
+      titleText: Text(
+        'home_saved_dialog_title'.tr,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+      messageText: Text(
+        'home_saved_dialog_message'.tr,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          height: 1.3,
+        ),
+      ),
+      mainButton: TextButton(
+        onPressed: () {
+          Get.closeCurrentSnackbar();
+          widget.controller.onTabChanged(1);
+        },
+        child: Text(
+          'home_saved_dialog_open_history'.tr,
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+      boxShadows: [
+        BoxShadow(
+          color: theme.colorScheme.shadow.withValues(alpha: 0.16),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    );
+  }
+
+  void _showUploadOptionsSheet(BuildContext context) {
+    final outerTheme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: outerTheme.colorScheme.surfaceContainer,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  child: Text(
+                    'home_upload_button'.tr,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.34,
+                      ),
+                    ),
+                  ),
+                  tileColor: theme.colorScheme.surfaceContainerHighest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.photo_camera_outlined,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  title: Text('home_take_photo_button'.tr),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    widget.controller.pickLabImageFromCamera();
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.34,
+                      ),
+                    ),
+                  ),
+                  tileColor: theme.colorScheme.surfaceContainerHighest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.photo_library_outlined,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  title: Text('home_pick_gallery_button'.tr),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    widget.controller.pickLabImageFromGallery();
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.34,
+                      ),
+                    ),
+                  ),
+                  tileColor: theme.colorScheme.surfaceContainerHighest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.picture_as_pdf_outlined,
+                      color: theme.colorScheme.onTertiaryContainer,
+                    ),
+                  ),
+                  title: Text('home_pick_pdf_button'.tr),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    widget.controller.pickLabPdfDocument();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -1027,6 +1863,361 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
           Text(label, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiStatusBanner extends StatelessWidget {
+  const _AiStatusBanner({
+    required this.status,
+    this.animation,
+    this.active = false,
+  });
+
+  final LabHistoryStatus status;
+  final Animation<double>? animation;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final color = switch (status) {
+      LabHistoryStatus.warning => theme.colorScheme.error,
+      LabHistoryStatus.improve => theme.colorScheme.primary,
+      LabHistoryStatus.normal => theme.colorScheme.secondary,
+    };
+
+    final icon = switch (status) {
+      LabHistoryStatus.warning => Icons.priority_high_outlined,
+      LabHistoryStatus.improve => Icons.trending_up,
+      LabHistoryStatus.normal => Icons.check_circle_outline,
+    };
+
+    final iconWidget = animation == null
+        ? Icon(icon, size: 16, color: color)
+        : AnimatedBuilder(
+            animation: animation!,
+            builder: (context, child) {
+              final scale = active ? 1 + ((animation!.value) * 0.08) : 1.0;
+              return Transform.scale(scale: scale, child: child);
+            },
+            child: Icon(icon, size: 16, color: color),
+          );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: color.withValues(alpha: 0.12),
+      ),
+      child: Row(
+        children: [
+          iconWidget,
+          const SizedBox(width: 8),
+          Text(
+            'AI Generated Insight',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedCountPill extends StatelessWidget {
+  const _AnimatedCountPill({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: color.withValues(alpha: 0.14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '$label: ',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: count.toDouble()),
+            duration: const Duration(milliseconds: 500),
+            builder: (context, value, child) {
+              return Text(
+                '${value.round()}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FadeSlideSwitcher extends StatelessWidget {
+  const _FadeSlideSwitcher({required this.visible, required this.child});
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (widget, animation) {
+        final offsetAnimation = Tween<Offset>(
+          begin: const Offset(0, 0.04),
+          end: Offset.zero,
+        ).animate(animation);
+
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: offsetAnimation, child: widget),
+        );
+      },
+      child: visible ? child : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _GlassPanel extends StatelessWidget {
+  const _GlassPanel({
+    required this.child,
+    required this.borderRadius,
+    required this.gradient,
+    required this.shadowColor,
+  });
+
+  final Widget child;
+  final BorderRadius borderRadius;
+  final Gradient gradient;
+  final Color shadowColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            gradient: gradient,
+            border: Border.all(
+              color: shadowColor.withValues(alpha: 0.2),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: shadowColor.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _SmartBadge extends StatelessWidget {
+  const _SmartBadge({
+    required this.icon,
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [background, foreground.withValues(alpha: 0.2)],
+        ),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: foreground.withValues(alpha: 0.24),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: foreground.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 14, color: foreground),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: foreground,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlowPill extends StatelessWidget {
+  const _FlowPill({
+    required this.index,
+    required this.label,
+    required this.color,
+  });
+
+  final int index;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Text(
+              '$index',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({
+    required this.icon,
+    required this.label,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: backgroundColor ?? theme.colorScheme.surfaceContainerHighest,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: foregroundColor ?? theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: foregroundColor ?? theme.colorScheme.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

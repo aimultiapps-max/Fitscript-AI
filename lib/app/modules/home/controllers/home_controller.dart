@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/services.dart';
@@ -14,21 +15,32 @@ import '../../../core/services/account_auth_service.dart';
 import '../../../core/services/lab_analysis_service.dart';
 import '../../../routes/app_pages.dart';
 import '../views/legal_document_view.dart';
+import '../views/premium_upgrade_view.dart';
 
 enum LabHistoryStatus { normal, warning, improve }
 
 class LabHistoryItem {
   const LabHistoryItem({
+    required this.id,
     required this.date,
     required this.title,
-    required this.note,
+    required this.summary,
+    required this.recommendation,
+    required this.signals,
+    required this.nextSteps,
     required this.status,
   });
 
+  final String id;
   final String date;
   final String title;
-  final String note;
+  final String summary;
+  final String recommendation;
+  final List<String> signals;
+  final List<String> nextSteps;
   final LabHistoryStatus status;
+
+  String get note => summary;
 }
 
 class PendingLabAnalysis {
@@ -67,7 +79,12 @@ class HomeController extends GetxController {
   final isAnalyzingLabImage = false.obs;
   final isPreparingDocument = false.obs;
   final isSavingAnalysis = false.obs;
+  final isCurrentAnalysisSaved = false.obs;
   final isHistoryLoading = false.obs;
+  final maxAnalysisFreeTrial = 2.obs;
+  final maxSaveAnalysisResultFreeTrial = 5.obs;
+  final usedAnalysisFreeTrial = 0.obs;
+  final usedSaveAnalysisResultFreeTrial = 0.obs;
   final analysisHistories = <LabHistoryItem>[].obs;
   final selectedLabImageBytes = Rxn<Uint8List>();
   final selectedLabImageName = RxnString();
@@ -87,9 +104,25 @@ class HomeController extends GetxController {
   _analysisHistorySubscription;
 
   Map<String, int> get trialUsage => <String, int>{
-    'profile_trial_lab_result_analysis'.tr: 5,
-    'profile_trial_save_analysis_result'.tr: 5,
+    'profile_trial_lab_result_analysis'.tr: analysisTrialRemaining,
+    'profile_trial_save_analysis_result'.tr: saveTrialRemaining,
   };
+
+  int get analysisTrialRemaining {
+    final remaining = maxAnalysisFreeTrial.value - usedAnalysisFreeTrial.value;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  int get saveTrialRemaining {
+    final remaining =
+        maxSaveAnalysisResultFreeTrial.value -
+        usedSaveAnalysisResultFreeTrial.value;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  bool get canAnalyzeWithTrial => analysisTrialRemaining > 0;
+
+  bool get canSaveWithTrial => saveTrialRemaining > 0;
 
   String get userName {
     final user = currentUser.value;
@@ -121,10 +154,13 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     _loadLanguagePreference();
+    _loadFreeTrialLimits();
     currentUser.value = FirebaseAuth.instance.currentUser;
+    _loadTrialUsageForUser(currentUser.value?.uid);
     _bindAnalysisHistoryStream(currentUser.value?.uid);
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
       currentUser.value = user;
+      _loadTrialUsageForUser(user?.uid);
       _bindAnalysisHistoryStream(user?.uid);
     });
   }
@@ -156,7 +192,7 @@ class HomeController extends GetxController {
         .listen(
           (snapshot) {
             final items = snapshot.docs
-                .map((doc) => _mapHistoryDocument(doc.data()))
+                .map((doc) => _mapHistoryDocument(doc.id, doc.data()))
                 .toList();
             analysisHistories.assignAll(items);
             isHistoryLoading.value = false;
@@ -168,12 +204,12 @@ class HomeController extends GetxController {
         );
   }
 
-  LabHistoryItem _mapHistoryDocument(Map<String, dynamic> data) {
+  LabHistoryItem _mapHistoryDocument(String docId, Map<String, dynamic> data) {
     final title =
         (data['title'] ?? data['testName'] ?? data['analysisTitle'] ?? '')
             .toString()
             .trim();
-    final note =
+    final summary =
         (data['summary'] ??
                 data['analysisSummary'] ??
                 data['note'] ??
@@ -181,6 +217,11 @@ class HomeController extends GetxController {
                 '')
             .toString()
             .trim();
+    final recommendation = (data['recommendation'] ?? data['advice'] ?? '')
+        .toString()
+        .trim();
+    final signals = _parseStringList(data['signals']);
+    final nextSteps = _parseStringList(data['nextSteps'] ?? data['next_steps']);
 
     final statusRaw =
         (data['status'] ?? data['riskLevel'] ?? data['severity'] ?? '')
@@ -203,11 +244,30 @@ class HomeController extends GetxController {
     final date = _extractHistoryDate(data);
 
     return LabHistoryItem(
+      id: docId,
       date: _formatDate(date),
       title: title.isNotEmpty ? title : 'history_unknown_title'.tr,
-      note: note.isNotEmpty ? note : 'history_unknown_note'.tr,
+      summary: summary.isNotEmpty ? summary : 'history_unknown_note'.tr,
+      recommendation: recommendation,
+      signals: signals,
+      nextSteps: nextSteps,
       status: status,
     );
+  }
+
+  List<String> _parseStringList(dynamic raw) {
+    if (raw is Iterable) {
+      return raw
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    if (raw is String) {
+      final value = raw.trim();
+      if (value.isEmpty) return const <String>[];
+      return <String>[value];
+    }
+    return const <String>[];
   }
 
   DateTime _extractHistoryDate(Map<String, dynamic> data) {
@@ -315,11 +375,132 @@ class HomeController extends GetxController {
     final languageName = normalized == 'id'
         ? 'profile_language_indonesian'.tr
         : 'profile_language_english'.tr;
-    Get.snackbar(
+    _showAppSnackbar(
       'profile_language_changed'.tr,
       'profile_language_changed_message'.trParams({'language': languageName}),
-      snackPosition: SnackPosition.BOTTOM,
     );
+  }
+
+  void _showAppSnackbar(
+    String title,
+    String message, {
+    SnackPosition position = SnackPosition.BOTTOM,
+    IconData icon = Icons.info_outline,
+  }) {
+    final theme = Get.theme;
+
+    Get.snackbar(
+      title,
+      message,
+      snackStyle: SnackStyle.FLOATING,
+      snackPosition: position,
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      borderRadius: 14,
+      duration: const Duration(milliseconds: 2400),
+      isDismissible: true,
+      shouldIconPulse: false,
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      colorText: theme.colorScheme.onSurface,
+      icon: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onPrimaryContainer,
+        ),
+      ),
+      titleText: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+      messageText: Text(
+        message,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          height: 1.3,
+        ),
+      ),
+      boxShadows: [
+        BoxShadow(
+          color: theme.colorScheme.shadow.withValues(alpha: 0.14),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _loadFreeTrialLimits() async {
+    try {
+      final remoteConfig = FirebaseRemoteConfig.instance;
+      await remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(seconds: 8),
+          minimumFetchInterval: const Duration(minutes: 30),
+        ),
+      );
+      await remoteConfig.setDefaults({
+        'max_analysis_free_trial': 2,
+        'max_save_analysis_result_free_trial': 5,
+      });
+      await remoteConfig.fetchAndActivate();
+
+      final analysisLimit = remoteConfig.getInt('max_analysis_free_trial');
+      final saveLimit = remoteConfig.getInt(
+        'max_save_analysis_result_free_trial',
+      );
+
+      if (analysisLimit > 0) {
+        maxAnalysisFreeTrial.value = analysisLimit;
+      }
+      if (saveLimit > 0) {
+        maxSaveAnalysisResultFreeTrial.value = saveLimit;
+      }
+    } catch (_) {}
+  }
+
+  String _trialUsageKey(String metric, String? uid) {
+    final owner = (uid ?? 'guest').trim();
+    return 'trial_usage_${metric}_$owner';
+  }
+
+  Future<void> _loadTrialUsageForUser(String? uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      usedAnalysisFreeTrial.value =
+          prefs.getInt(_trialUsageKey('analysis', uid)) ?? 0;
+      usedSaveAnalysisResultFreeTrial.value =
+          prefs.getInt(_trialUsageKey('save', uid)) ?? 0;
+    } catch (_) {
+      usedAnalysisFreeTrial.value = 0;
+      usedSaveAnalysisResultFreeTrial.value = 0;
+    }
+  }
+
+  Future<void> _increaseTrialUsage({
+    required String metric,
+    required String? uid,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _trialUsageKey(metric, uid);
+    final current = prefs.getInt(key) ?? 0;
+    final next = current + 1;
+    await prefs.setInt(key, next);
+
+    if (metric == 'analysis') {
+      usedAnalysisFreeTrial.value = next;
+    } else if (metric == 'save') {
+      usedSaveAnalysisResultFreeTrial.value = next;
+    }
   }
 
   Future<void> pickLabImageFromCamera() async {
@@ -353,10 +534,10 @@ class HomeController extends GetxController {
 
       final bytes = picked.bytes;
       if (bytes == null || bytes.isEmpty) {
-        Get.snackbar(
+        _showAppSnackbar(
           'home_pick_failed_title'.tr,
           'home_pick_failed_message'.tr,
-          snackPosition: SnackPosition.BOTTOM,
+          icon: Icons.error_outline,
         );
         return;
       }
@@ -373,11 +554,12 @@ class HomeController extends GetxController {
       selectedLabFinalSizeBytes.value = prepared.finalSizeBytes;
       isSelectedLabFileCompressed.value = prepared.isCompressed;
       pendingAnalysis.value = null;
+      isCurrentAnalysisSaved.value = false;
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'home_pick_failed_title'.tr,
         'home_pick_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     }
   }
@@ -429,26 +611,37 @@ class HomeController extends GetxController {
       selectedLabFinalSizeBytes.value = prepared.finalSizeBytes;
       isSelectedLabFileCompressed.value = prepared.isCompressed;
       pendingAnalysis.value = null;
+      isCurrentAnalysisSaved.value = false;
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'home_pick_failed_title'.tr,
         'home_pick_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     }
   }
 
   Future<void> analyzeSelectedLabImage() async {
     if (selectedLabImageBytes.value == null) {
-      Get.snackbar(
+      _showAppSnackbar(
         'home_no_document_title'.tr,
         'home_no_document_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.upload_file_outlined,
       );
       return;
     }
     if (isPreparingDocument.value) return;
     if (isAnalyzingLabImage.value) return;
+    if (!canAnalyzeWithTrial) {
+      _showAppSnackbar(
+        'home_trial_analysis_limit_title'.tr,
+        'home_trial_analysis_limit_message'.trParams({
+          'max': '${maxAnalysisFreeTrial.value}',
+        }),
+        icon: Icons.lock_outline,
+      );
+      return;
+    }
 
     isAnalyzingLabImage.value = true;
     try {
@@ -472,30 +665,46 @@ class HomeController extends GetxController {
         nextSteps: output.nextSteps,
         status: status,
       );
+      isCurrentAnalysisSaved.value = false;
+      await _increaseTrialUsage(
+        metric: 'analysis',
+        uid: currentUser.value?.uid,
+      );
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'home_analyze_failed_title'.tr,
         'home_analyze_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     } finally {
       isAnalyzingLabImage.value = false;
     }
   }
 
-  Future<void> saveAnalyzedResult() async {
+  Future<bool> saveAnalyzedResult() async {
     final user = currentUser.value;
     if (user == null) {
-      Get.snackbar(
+      _showAppSnackbar(
         'home_save_failed_title'.tr,
         'home_save_failed_no_user'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
-      return;
+      return false;
     }
     final analysis = pendingAnalysis.value;
-    if (analysis == null) return;
-    if (isSavingAnalysis.value) return;
+    if (analysis == null) return false;
+    if (isCurrentAnalysisSaved.value) return false;
+    if (isSavingAnalysis.value) return false;
+    if (!canSaveWithTrial) {
+      _showAppSnackbar(
+        'home_trial_save_limit_title'.tr,
+        'home_trial_save_limit_message'.trParams({
+          'max': '${maxSaveAnalysisResultFreeTrial.value}',
+        }),
+        icon: Icons.lock_outline,
+      );
+      return false;
+    }
 
     isSavingAnalysis.value = true;
     try {
@@ -525,28 +734,57 @@ class HomeController extends GetxController {
             'analyzedAt': FieldValue.serverTimestamp(),
           });
 
-      Get.snackbar(
-        'home_saved_title'.tr,
-        'home_saved_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      isCurrentAnalysisSaved.value = true;
+      await _increaseTrialUsage(metric: 'save', uid: user.uid);
+      return true;
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'home_save_failed_title'.tr,
         'home_save_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
+      return false;
     } finally {
       isSavingAnalysis.value = false;
     }
   }
 
-  void openHistoryDetail(LabHistoryItem history) {
-    Get.snackbar(
-      'history_snackbar_title'.tr,
-      'history_snackbar_message'.trParams({'title': history.title}),
-      snackPosition: SnackPosition.BOTTOM,
-    );
+  Future<bool> deleteHistoryItem(LabHistoryItem history) async {
+    final user = currentUser.value;
+    if (user == null) {
+      _showAppSnackbar(
+        'history_delete_failed_title'.tr,
+        'home_save_failed_no_user'.tr,
+        icon: Icons.error_outline,
+      );
+      return false;
+    }
+
+    if (history.id.trim().isEmpty) {
+      _showAppSnackbar(
+        'history_delete_failed_title'.tr,
+        'history_delete_failed_message'.tr,
+        icon: Icons.error_outline,
+      );
+      return false;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('analysis_history')
+          .doc(history.id)
+          .delete();
+      return true;
+    } catch (_) {
+      _showAppSnackbar(
+        'history_delete_failed_title'.tr,
+        'history_delete_failed_message'.tr,
+        icon: Icons.error_outline,
+      );
+      return false;
+    }
   }
 
   void openPrivacyPolicy() async {
@@ -616,10 +854,10 @@ class HomeController extends GetxController {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      Get.snackbar(
+      _showAppSnackbar(
         'consent_failed_title'.tr,
         'consent_failed_no_session'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
       return;
     }
@@ -637,63 +875,101 @@ class HomeController extends GetxController {
             'app': 'FitScript AI: Cek Hasil Lab',
           }, SetOptions(merge: true));
 
-      Get.snackbar(
-        successTitle,
-        successMessage,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      _showAppSnackbar(successTitle, successMessage, icon: Icons.check_rounded);
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'consent_failed_title'.tr,
         'consent_failed_server'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     }
   }
 
   Future<void> signOut() async {
+    final theme = Get.theme;
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: theme.colorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        title: Text('profile_sign_out_confirm_title'.tr),
+        content: Text('profile_sign_out_confirm_message'.tr),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+            ),
+            child: Text('profile_cancel'.tr),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: Text('profile_sign_out_button'.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+
+    if (confirmed != true) return;
+
     try {
       await _accountAuthService.signOutToAnonymous();
       Get.offAllNamed(Routes.ONBOARDING);
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'profile_sign_out_failed_title'.tr,
         'profile_sign_out_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     }
   }
 
   void upgradeToPremium() {
-    Get.snackbar(
-      'profile_upgrade_info_title'.tr,
-      'profile_upgrade_info_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    Get.to<void>(() => const PremiumUpgradeView());
   }
 
   void restorePurchases() {
-    Get.snackbar(
+    _showAppSnackbar(
       'profile_restore_info_title'.tr,
       'profile_restore_info_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
+      icon: Icons.info_outline,
     );
   }
 
   Future<void> deleteAccount() async {
     if (isDeletingAccount.value) return;
 
+    final theme = Get.theme;
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
+        backgroundColor: theme.colorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
         title: Text('profile_delete_title'.tr),
         content: Text('profile_delete_message'.tr),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+            ),
             child: Text('profile_cancel'.tr),
           ),
           FilledButton(
             onPressed: () => Get.back(result: true),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
             child: Text('profile_delete_button'.tr),
           ),
         ],
@@ -710,45 +986,45 @@ class HomeController extends GetxController {
 
       switch (result.status) {
         case DeleteAccountStatus.deleted:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_delete_success_title'.tr,
             'profile_delete_success_message'.tr,
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.check_rounded,
           );
           Get.offAllNamed(Routes.ONBOARDING);
           return;
         case DeleteAccountStatus.requiresRecentLogin:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_delete_recent_login_title'.tr,
             'profile_delete_recent_login_message'.tr,
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.lock_clock_outlined,
           );
           return;
         case DeleteAccountStatus.cancelled:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_delete_cancelled_title'.tr,
             'profile_delete_cancelled_message'.tr,
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.info_outline,
           );
           return;
         case DeleteAccountStatus.failed:
           final detail = (result.errorCode ?? '').trim();
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_delete_failed_title'.tr,
             detail.isNotEmpty
                 ? 'profile_delete_failed_message_with_code'.trParams({
                     'code': detail,
                   })
                 : 'profile_delete_failed_message'.tr,
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.error_outline,
           );
           return;
       }
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'profile_delete_failed_title'.tr,
         'profile_delete_error_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     } finally {
       isDeletingAccount.value = false;
@@ -763,21 +1039,21 @@ class HomeController extends GetxController {
       final result = await _accountAuthService.connectWithGoogle();
       switch (result.status) {
         case LinkAccountStatus.linked:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_link_success_title'.tr,
             'profile_link_success_message'.trParams({
               'provider': result.providerName,
             }),
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.verified_user_outlined,
           );
           break;
         case LinkAccountStatus.signedInExisting:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_login_success_title'.tr,
             'profile_login_success_message'.trParams({
               'provider': result.providerName,
             }),
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.login,
           );
           break;
         case LinkAccountStatus.cancelled:
@@ -786,10 +1062,10 @@ class HomeController extends GetxController {
     } on FirebaseAuthException catch (error) {
       _showAuthError(error, fallbackTitle: 'profile_link_google_failed_title');
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'profile_link_google_failed_title'.tr,
         'profile_link_google_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     } finally {
       isLinkingGoogle.value = false;
@@ -804,21 +1080,21 @@ class HomeController extends GetxController {
       final result = await _accountAuthService.connectWithApple();
       switch (result.status) {
         case LinkAccountStatus.linked:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_link_success_title'.tr,
             'profile_link_success_message'.trParams({
               'provider': result.providerName,
             }),
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.verified_user_outlined,
           );
           break;
         case LinkAccountStatus.signedInExisting:
-          Get.snackbar(
+          _showAppSnackbar(
             'profile_login_success_title'.tr,
             'profile_login_success_message'.trParams({
               'provider': result.providerName,
             }),
-            snackPosition: SnackPosition.BOTTOM,
+            icon: Icons.login,
           );
           break;
         case LinkAccountStatus.cancelled:
@@ -827,10 +1103,10 @@ class HomeController extends GetxController {
     } on FirebaseAuthException catch (error) {
       _showAuthError(error, fallbackTitle: 'profile_link_apple_failed_title');
     } catch (_) {
-      Get.snackbar(
+      _showAppSnackbar(
         'profile_link_apple_failed_title'.tr,
         'profile_link_apple_failed_message'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        icon: Icons.error_outline,
       );
     } finally {
       isLinkingApple.value = false;
@@ -848,11 +1124,7 @@ class HomeController extends GetxController {
       _ => 'profile_auth_error_generic'.tr,
     };
 
-    Get.snackbar(
-      fallbackTitle.tr,
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    _showAppSnackbar(fallbackTitle.tr, message, icon: Icons.error_outline);
   }
 
   void startLabUpload() {
@@ -883,10 +1155,10 @@ class HomeController extends GetxController {
   }
 
   void openSampleInsight() {
-    Get.snackbar(
+    _showAppSnackbar(
       'home_sample_insight_title'.tr,
       'home_sample_insight_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
+      icon: Icons.lightbulb_outline,
     );
   }
 
@@ -979,34 +1251,34 @@ class HomeController extends GetxController {
   }
 
   void _showTooLargeFileMessage() {
-    Get.snackbar(
+    _showAppSnackbar(
       'home_file_too_large_title'.tr,
       'home_file_too_large_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
+      icon: Icons.warning_amber_outlined,
     );
   }
 
   void _showPdfOnlyMessage() {
-    Get.snackbar(
+    _showAppSnackbar(
       'home_pdf_only_title'.tr,
       'home_pdf_only_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
+      icon: Icons.picture_as_pdf_outlined,
     );
   }
 
   void _showFilePickerUnavailableMessage() {
-    Get.snackbar(
+    _showAppSnackbar(
       'home_picker_unavailable_title'.tr,
       'home_picker_unavailable_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
+      icon: Icons.extension_off_outlined,
     );
   }
 
   void _showPreparingInProgressMessage() {
-    Get.snackbar(
+    _showAppSnackbar(
       'home_preparing_wait_title'.tr,
       'home_preparing_wait_message'.tr,
-      snackPosition: SnackPosition.BOTTOM,
+      icon: Icons.hourglass_top_outlined,
     );
   }
 }
