@@ -74,6 +74,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                 title: slide.title.tr,
                 body: slide.bodyBuilder(context),
                 bottomContentPadding: index == 1 ? 116 : 92,
+                activeIndex: _currentIndex,
+                slideCount: _slides.length,
               );
             },
           ),
@@ -81,54 +83,103 @@ class _OnboardingViewState extends State<OnboardingView> {
             top: MediaQuery.of(context).padding.top + 10,
             left: 16,
             right: 16,
-            child: Row(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.32),
+            child: Obx(() {
+              final selectedLanguage = _controller.selectedLanguageCode.value;
+              return Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.32),
+                      ),
+                    ),
+                    child: TextButton(
+                      onPressed: _controller.goToHomePreview,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                      ),
+                      child: Text(
+                        'onboarding_skip'.tr,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                  child: TextButton(
-                    onPressed: _controller.goToHomePreview,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
+                  const Spacer(),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<String>(
+                    tooltip: 'profile_language'.tr,
+                    onSelected: (value) {
+                      _controller.changeLanguage(value);
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'en',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.language),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text('profile_language_english'.tr),
+                            ),
+                            if (selectedLanguage == 'en')
+                              Icon(
+                                Icons.check,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'id',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.language),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text('profile_language_indonesian'.tr),
+                            ),
+                            if (selectedLanguage == 'id')
+                              Icon(
+                                Icons.check,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
+                        horizontal: 10,
                         vertical: 8,
                       ),
-                    ),
-                    child: Text(
-                      'onboarding_skip'.tr,
-                      style: theme.textTheme.labelLarge?.copyWith(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.32),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.language,
+                        size: 18,
                         color: Colors.white,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.32),
-                    ),
-                  ),
-                  child: _TopDotsIndicator(
-                    activeIndex: _currentIndex,
-                    count: _slides.length,
-                  ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
           Positioned(
             left: 16,
@@ -244,12 +295,16 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
     required this.title,
     required this.body,
     required this.bottomContentPadding,
+    required this.activeIndex,
+    required this.slideCount,
   });
 
   final String imagePath;
   final String title;
   final Widget body;
   final double bottomContentPadding;
+  final int activeIndex;
+  final int slideCount;
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +343,27 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
                         Colors.black.withValues(alpha: 0.12),
                         Colors.black.withValues(alpha: 0.28),
                       ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 14,
+                  bottom: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.32),
+                      ),
+                    ),
+                    child: _TopDotsIndicator(
+                      activeIndex: activeIndex,
+                      count: slideCount,
                     ),
                   ),
                 ),

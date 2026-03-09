@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,16 +20,29 @@ class PremiumUpgradeView extends StatefulWidget {
 
 class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
   int _selectedPlanIndex = 0;
-  String _monthlyProductId = 'com.aimultiapps.fitscriptAi.premium.monthly';
-  String _yearlyProductId = 'com.aimultiapps.fitscriptAi.premium.yearly';
+  String _iosMonthlyProductId = 'com.aimultiapps.fitscriptAi.premium.monthly';
+  String _iosYearlyProductId = 'com.aimultiapps.fitscriptAi.premium.yearly';
+  String _androidMonthlyProductId = 'fitscriptai_premium_monthly';
+  String _androidYearlyProductId = 'fitscriptai.premium.yearly';
   final InAppPurchaseService _purchaseService = InAppPurchaseService();
   Map<String, ProductDetails> _products = const {};
   bool _isPurchasing = false;
   bool _isStoreAvailable = false;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
 
-  String get _selectedProductId =>
-      _selectedPlanIndex == 0 ? _monthlyProductId : _yearlyProductId;
+  bool get _isAndroidPlatform =>
+      defaultTargetPlatform == TargetPlatform.android;
+  bool get _isIosPlatform => defaultTargetPlatform == TargetPlatform.iOS;
+
+  String get _activeMonthlyProductId =>
+      _isAndroidPlatform ? _androidMonthlyProductId : _iosMonthlyProductId;
+
+  String get _activeYearlyProductId =>
+      _isAndroidPlatform ? _androidYearlyProductId : _iosYearlyProductId;
+
+  String get _selectedProductId => _selectedPlanIndex == 0
+      ? _activeMonthlyProductId
+      : _activeYearlyProductId;
 
   @override
   void initState() {
@@ -58,7 +72,53 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
   }
 
   bool _isManagedSku(String productId) {
-    return productId == _monthlyProductId || productId == _yearlyProductId;
+    return productId == _iosMonthlyProductId ||
+        productId == _iosYearlyProductId ||
+        productId == _androidMonthlyProductId ||
+        productId == _androidYearlyProductId;
+  }
+
+  List<String> _normalizedCandidates(List<String> values) {
+    final normalized = <String>[];
+    for (final value in values) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) continue;
+      if (!normalized.contains(trimmed)) {
+        normalized.add(trimmed);
+      }
+    }
+    return normalized;
+  }
+
+  String _pickConfiguredOrAvailableSku({
+    required List<String> preferred,
+    required Map<String, ProductDetails> availableProducts,
+    required String currentValue,
+  }) {
+    for (final sku in preferred) {
+      if (availableProducts.containsKey(sku)) {
+        return sku;
+      }
+    }
+    if (availableProducts.containsKey(currentValue)) {
+      return currentValue;
+    }
+    return currentValue;
+  }
+
+  ProductDetails? _resolveSelectedProduct() {
+    final selectedSku = _selectedProductId.trim();
+    final direct = _products[selectedSku];
+    if (direct != null) return direct;
+
+    final fallback = _products.values.firstWhere((product) {
+      final id = product.id.toLowerCase();
+      if (_selectedPlanIndex == 0) {
+        return id.contains('month');
+      }
+      return id.contains('year') || id.contains('annual');
+    }, orElse: () => _products.values.first);
+    return fallback;
   }
 
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
@@ -114,7 +174,12 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final isYearly = purchase.productID == _yearlyProductId;
+    final yearlySkus = <String>{
+      _iosYearlyProductId,
+      _androidYearlyProductId,
+      _activeYearlyProductId,
+    };
+    final isYearly = yearlySkus.contains(purchase.productID);
     await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
@@ -140,13 +205,13 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
     setState(() => _isPurchasing = true);
     try {
       await _purchaseService.restorePurchases();
-      if (!mounted) return;
+      if (!context.mounted) return;
       _showPremiumSnackbar(
         context,
         'Restore request sent. If previous purchases are found, premium will be activated automatically.',
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       _showPremiumSnackbar(context, 'Unable to restore purchases right now.');
     } finally {
       if (mounted) {
@@ -158,6 +223,9 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
   Future<void> _loadSubscriptionConfig() async {
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
+      final isAndroid = _isAndroidPlatform;
+      final isIOS = _isIosPlatform;
+
       await remoteConfig.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(seconds: 8),
@@ -165,21 +233,78 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
         ),
       );
       await remoteConfig.setDefaults({
-        'monthly_fitscript_pro': _monthlyProductId,
-        'yearly_fitscript_pro': _yearlyProductId,
+        'android_monthly_fitscript_pro': 'fitscriptai-premium-monthly',
+        'android_yearly_fitscript_pro': 'fitscriptai-premium-yearly',
+        'ios_monthly_fitscript_pro':
+            'com.aimultiapps.fitscriptAi.premium.monthly',
+        'ios_yearly_fitscript_pro':
+            'com.aimultiapps.fitscriptAi.premium.yearly',
+        'monthly_fitscript_pro': _iosMonthlyProductId,
+        'yearly_fitscript_pro': _iosYearlyProductId,
       });
       await remoteConfig.fetchAndActivate();
 
-      final monthly = remoteConfig.getString('monthly_fitscript_pro').trim();
-      final yearly = remoteConfig.getString('yearly_fitscript_pro').trim();
+      final androidMonthlyCandidates = _normalizedCandidates(<String>[
+        remoteConfig.getString('android_monthly_fitscript_pro'),
+        _androidMonthlyProductId,
+        'fitscriptai-premium-monthly',
+        'fitscriptai_premium_monthly',
+        'fitscriptai.premium.monthly',
+      ]);
+      final androidYearlyCandidates = _normalizedCandidates(<String>[
+        remoteConfig.getString('android_yearly_fitscript_pro'),
+        _androidYearlyProductId,
+        'fitscriptai-premium-yearly',
+        'fitscriptai_premium_yearly',
+        'fitscriptai.premium.yearly',
+      ]);
+
+      final iosMonthlyCandidates = _normalizedCandidates(<String>[
+        remoteConfig.getString('ios_monthly_fitscript_pro'),
+        remoteConfig.getString('monthly_fitscript_pro'),
+        _iosMonthlyProductId,
+        'com.aimultiapps.fitscriptAi.premium.monthly',
+      ]);
+      final iosYearlyCandidates = _normalizedCandidates(<String>[
+        remoteConfig.getString('ios_yearly_fitscript_pro'),
+        remoteConfig.getString('yearly_fitscript_pro'),
+        _iosYearlyProductId,
+        'com.aimultiapps.fitscriptAi.premium.yearly',
+      ]);
+
+      final monthlyCandidates = _normalizedCandidates(<String>[
+        if (isAndroid) ...androidMonthlyCandidates,
+        if (isIOS) ...iosMonthlyCandidates,
+      ]);
+      final yearlyCandidates = _normalizedCandidates(<String>[
+        if (isAndroid) ...androidYearlyCandidates,
+        if (isIOS) ...iosYearlyCandidates,
+      ]);
+
+      final discoveryProducts = await _purchaseService.loadProducts({
+        ...monthlyCandidates,
+        ...yearlyCandidates,
+      });
+
+      final monthly = _pickConfiguredOrAvailableSku(
+        preferred: monthlyCandidates,
+        availableProducts: discoveryProducts,
+        currentValue: _activeMonthlyProductId,
+      );
+      final yearly = _pickConfiguredOrAvailableSku(
+        preferred: yearlyCandidates,
+        availableProducts: discoveryProducts,
+        currentValue: _activeYearlyProductId,
+      );
 
       if (!mounted) return;
       setState(() {
-        if (monthly.isNotEmpty) {
-          _monthlyProductId = monthly;
-        }
-        if (yearly.isNotEmpty) {
-          _yearlyProductId = yearly;
+        if (isAndroid) {
+          _androidMonthlyProductId = monthly;
+          _androidYearlyProductId = yearly;
+        } else {
+          _iosMonthlyProductId = monthly;
+          _iosYearlyProductId = yearly;
         }
       });
 
@@ -190,8 +315,8 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
   Future<void> _loadStoreProducts() async {
     final isAvailable = await _purchaseService.isStoreAvailable();
     final products = await _purchaseService.loadProducts({
-      _monthlyProductId,
-      _yearlyProductId,
+      _activeMonthlyProductId.trim(),
+      _activeYearlyProductId.trim(),
     });
 
     if (!mounted) return;
@@ -234,31 +359,36 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
   Future<void> _onUpgradePressed(BuildContext context) async {
     if (_isPurchasing) return;
 
-    final selectedSku = _selectedProductId;
+    final selectedSku = _selectedProductId.trim();
 
     if (!_isStoreAvailable) {
       _showPremiumSnackbar(context, 'Store is unavailable right now.');
       return;
     }
 
-    final product = _products[selectedSku];
+    final product = _resolveSelectedProduct();
     if (product == null) {
-      _showPremiumSnackbar(context, 'Product not found for SKU: $selectedSku');
+      _showPremiumSnackbar(
+        context,
+        'Product not found. Selected SKU: $selectedSku\nAvailable: ${_products.keys.join(', ')}',
+      );
       return;
     }
 
+    final purchaseSku = product.id;
+
     setState(() => _isPurchasing = true);
     final result = await _purchaseService.buyProduct(product);
-    if (!mounted) return;
+    if (!context.mounted) return;
     setState(() => _isPurchasing = false);
 
     final message = switch (result) {
       PurchaseStartResult.started =>
-        'Purchase flow started.\nSKU: $selectedSku',
+        'Purchase flow started.\nSKU: $purchaseSku',
       PurchaseStartResult.unavailable =>
-        'Store is unavailable right now.\nSKU: $selectedSku',
+        'Store is unavailable right now.\nSKU: $purchaseSku',
       PurchaseStartResult.failed =>
-        'Unable to start purchase flow.\nSKU: $selectedSku',
+        'Unable to start purchase flow.\nSKU: $purchaseSku',
     };
     _showPremiumSnackbar(context, message);
   }
@@ -395,7 +525,8 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
                     description:
                         'Unlimited scans & deep AI health insights for 1 month.',
                     price:
-                        _products[_monthlyProductId]?.price ?? r'$4,99/Month',
+                        _products[_activeMonthlyProductId]?.price ??
+                        r'$0,0/Month',
                     onTap: () => setState(() => _selectedPlanIndex = 0),
                   ),
                   const SizedBox(height: 8),
@@ -404,7 +535,9 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
                     title: 'Yearly FitScript AI',
                     description:
                         'Unlimited scans & trend analysis for 1 year. Save 40%!',
-                    price: _products[_yearlyProductId]?.price ?? r'$39,99/Year',
+                    price:
+                        _products[_activeYearlyProductId]?.price ??
+                        r'$0,0/Year',
                     onTap: () => setState(() => _selectedPlanIndex = 1),
                   ),
                   const SizedBox(height: 10),

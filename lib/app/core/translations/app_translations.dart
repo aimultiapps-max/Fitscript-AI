@@ -52,10 +52,34 @@ class AppTranslations extends Translations {
       'history_status_warning': 'Warning',
       'history_status_improve': 'Improving',
       'history_status_normal': 'Stable',
+      'history_status_label': 'Status',
+      'history_date_label': 'Date',
       'history_loading': 'Loading analysis history...',
       'history_empty_title': 'No analysis history yet',
       'history_empty_subtitle':
           'Your uploaded lab analysis results will appear here.',
+      'history_trend_title': 'Trend Analysis',
+      'history_trend_subtitle':
+          'See your progress trend from saved results over time.',
+      'history_trend_up': 'Overall trend is improving',
+      'history_trend_down': 'Overall trend needs attention',
+      'history_trend_stable': 'Overall trend is stable',
+      'history_trend_focus_label': 'Primary marker: @marker',
+      'history_trend_other_markers': 'Other markers: @markers',
+      'history_trend_breakdown_title': 'Marker breakdown',
+      'history_trend_breakdown_item': '@marker (@count results): @direction',
+      'history_trend_direction_up': 'improving',
+      'history_trend_direction_down': 'needs attention',
+      'history_trend_direction_flat': 'stable',
+      'history_trend_detail_title': '@marker trend detail',
+      'history_trend_detail_subtitle':
+          '@count results • current direction: @direction',
+      'history_trend_detail_points_title': 'Result sequence',
+      'history_trend_detail_point_item': '#@index (@date): @status',
+      'history_trend_not_enough_data':
+          'Not enough repeated marker data yet to calculate a reliable trend.',
+      'history_trend_premium_message':
+          'Upgrade to Premium to unlock visual trend analysis.',
       'history_delete_confirm_title': 'Delete history?',
       'history_delete_confirm_message':
           'The analysis "@title" will be removed from your history.',
@@ -65,6 +89,16 @@ class AppTranslations extends Translations {
       'history_delete_failed_title': 'Delete failed',
       'history_delete_failed_message':
           'Unable to delete history right now. Please try again.',
+      'history_export_button': 'Export PDF',
+      'history_export_premium_title': 'Premium feature',
+      'history_export_premium_message':
+          'Export to PDF is available for Premium users.',
+      'history_export_success_title': 'PDF ready',
+      'history_export_success_message':
+          'Analysis report has been prepared for sharing.',
+      'history_export_failed_title': 'Export failed',
+      'history_export_failed_message':
+          'Unable to export this report right now. Please try again.',
       'history_unknown_title': 'Lab Analysis',
       'history_unknown_note': 'No summary available.',
       'history_sample_1_title': 'Complete blood count',
@@ -205,6 +239,10 @@ class AppTranslations extends Translations {
       'profile_sign_out_confirm_title': 'Sign out now?',
       'profile_sign_out_confirm_message':
           'You will continue as a guest account on this device.',
+      'profile_guest_exit_button': 'Exit Guest Mode',
+      'profile_guest_exit_confirm_title': 'Exit guest mode?',
+      'profile_guest_exit_confirm_message':
+          'You will be redirected to the authentication page.',
       'profile_sign_out_failed_title': 'Sign out failed',
       'profile_sign_out_failed_message':
           'There was a problem signing out. Please try again.',
@@ -254,6 +292,9 @@ class AppTranslations extends Translations {
           'Connect your account to keep recipes, chats, and subscription data synced across devices.',
       'profile_account_sync_connected':
           'Connected as @name. Your data is synced across devices.',
+      'profile_guest_session_label': 'Guest session',
+      'profile_guest_session_local': 'Local Guest (this device only)',
+      'profile_guest_session_firebase': 'Firebase Anonymous',
       'profile_connect_google': 'Connect with Google',
       'profile_connect_apple': 'Connect with Apple',
       'profile_connecting': 'Connecting...',
@@ -298,8 +339,24 @@ class AppTranslations extends Translations {
           'Apple sign-in returned an invalid response. Make sure your Apple ID is signed in on this device and try again.',
       'profile_auth_error_apple_setup':
           'Apple sign-in token is missing. Verify Sign in with Apple is enabled in Apple Developer and Firebase Console.',
+      'profile_auth_error_apple_not_available':
+          'Sign in with Apple is not available on this device. Please ensure Apple ID is signed in and iCloud is active.',
       'profile_auth_error_generic':
           'Authentication error occurred. Please try again.',
+      'auth_title': 'Sign in to continue',
+      'auth_subtitle':
+          'Use Google or Apple account to access your FitScript AI data securely.',
+      'auth_sign_in_failed_title': 'Sign in failed',
+      'auth_continue_as_guest': 'Continue as Guest',
+      'auth_guest_confirm_title': 'Continue as guest?',
+      'auth_guest_confirm_message':
+          'Guest mode stores data only on this device and may not sync across devices.',
+      'auth_guest_dont_show_again': "Don't show this again",
+      'auth_usage_guide_title': 'Application Usage Guide',
+      'auth_acknowledgement_intro':
+          'By using FitScript AI, you acknowledge that you have read and understood the application guide, Privacy Policy, and Terms and Conditions.',
+      'auth_acknowledgement_prefix':
+          'By using FitScript AI, you acknowledge that you have read and understood ',
     },
     'id_ID': {
       'onboarding_skip': 'Lewati',
@@ -347,10 +404,34 @@ class AppTranslations extends Translations {
       'history_status_warning': 'Perhatian',
       'history_status_improve': 'Membaik',
       'history_status_normal': 'Stabil',
+      'history_status_label': 'Status',
+      'history_date_label': 'Tanggal',
       'history_loading': 'Memuat riwayat analisis...',
       'history_empty_title': 'Belum ada riwayat analisis',
       'history_empty_subtitle':
           'Hasil analisis dari upload lab Anda akan muncul di sini.',
+      'history_trend_title': 'Trend Analysis',
+      'history_trend_subtitle':
+          'Lihat tren perkembangan dari riwayat hasil yang disimpan.',
+      'history_trend_up': 'Tren keseluruhan membaik',
+      'history_trend_down': 'Tren keseluruhan perlu perhatian',
+      'history_trend_stable': 'Tren keseluruhan stabil',
+      'history_trend_focus_label': 'Marker utama: @marker',
+      'history_trend_other_markers': 'Marker lain: @markers',
+      'history_trend_breakdown_title': 'Rangkuman marker',
+      'history_trend_breakdown_item': '@marker (@count hasil): @direction',
+      'history_trend_direction_up': 'membaik',
+      'history_trend_direction_down': 'perlu perhatian',
+      'history_trend_direction_flat': 'stabil',
+      'history_trend_detail_title': 'Detail tren @marker',
+      'history_trend_detail_subtitle':
+          '@count hasil • arah saat ini: @direction',
+      'history_trend_detail_points_title': 'Urutan hasil',
+      'history_trend_detail_point_item': '#@index (@date): @status',
+      'history_trend_not_enough_data':
+          'Data marker berulang belum cukup untuk menghitung tren yang andal.',
+      'history_trend_premium_message':
+          'Upgrade ke Premium untuk membuka analisis tren visual.',
       'history_delete_confirm_title': 'Hapus riwayat?',
       'history_delete_confirm_message':
           'Analisis "@title" akan dihapus dari riwayat Anda.',
@@ -360,6 +441,16 @@ class AppTranslations extends Translations {
       'history_delete_failed_title': 'Gagal menghapus',
       'history_delete_failed_message':
           'Tidak dapat menghapus riwayat saat ini. Silakan coba lagi.',
+      'history_export_button': 'Export PDF',
+      'history_export_premium_title': 'Fitur Premium',
+      'history_export_premium_message':
+          'Export ke PDF tersedia untuk pengguna Premium.',
+      'history_export_success_title': 'PDF siap',
+      'history_export_success_message':
+          'Laporan analisis berhasil disiapkan untuk dibagikan.',
+      'history_export_failed_title': 'Export gagal',
+      'history_export_failed_message':
+          'Tidak dapat export laporan saat ini. Silakan coba lagi.',
       'history_unknown_title': 'Analisis Hasil Lab',
       'history_unknown_note': 'Ringkasan belum tersedia.',
       'history_sample_1_title': 'Pemeriksaan darah lengkap',
@@ -499,6 +590,10 @@ class AppTranslations extends Translations {
       'profile_sign_out_confirm_title': 'Keluar sekarang?',
       'profile_sign_out_confirm_message':
           'Anda akan melanjutkan sebagai akun tamu di perangkat ini.',
+      'profile_guest_exit_button': 'Keluar dari Mode Tamu',
+      'profile_guest_exit_confirm_title': 'Keluar dari mode tamu?',
+      'profile_guest_exit_confirm_message':
+          'Anda akan diarahkan ke halaman autentikasi.',
       'profile_sign_out_failed_title': 'Gagal keluar',
       'profile_sign_out_failed_message':
           'Terjadi kendala saat mencoba keluar akun. Coba lagi.',
@@ -549,6 +644,9 @@ class AppTranslations extends Translations {
           'Hubungkan akun Anda agar resep, chat, dan data langganan tersinkron di semua perangkat.',
       'profile_account_sync_connected':
           'Terhubung sebagai @name. Data Anda tersinkron di semua perangkat.',
+      'profile_guest_session_label': 'Sesi guest',
+      'profile_guest_session_local': 'Guest Lokal (khusus perangkat ini)',
+      'profile_guest_session_firebase': 'Anonymous Firebase',
       'profile_connect_google': 'Hubungkan dengan Google',
       'profile_connect_apple': 'Hubungkan dengan Apple',
       'profile_connecting': 'Menghubungkan...',
@@ -591,8 +689,24 @@ class AppTranslations extends Translations {
           'Apple sign-in mengembalikan respons tidak valid. Pastikan Apple ID sudah login di perangkat ini lalu coba lagi.',
       'profile_auth_error_apple_setup':
           'Token Apple sign-in tidak tersedia. Pastikan Sign in with Apple sudah aktif di Apple Developer dan Firebase Console.',
+      'profile_auth_error_apple_not_available':
+          'Sign in with Apple tidak tersedia di perangkat ini. Pastikan Apple ID sudah login dan iCloud aktif.',
       'profile_auth_error_generic':
           'Terjadi kendala autentikasi. Silakan coba lagi.',
+      'auth_title': 'Masuk untuk melanjutkan',
+      'auth_subtitle':
+          'Gunakan akun Google atau Apple untuk mengakses data FitScript AI Anda dengan aman.',
+      'auth_sign_in_failed_title': 'Gagal masuk',
+      'auth_continue_as_guest': 'Lanjut sebagai Tamu',
+      'auth_guest_confirm_title': 'Lanjut sebagai tamu?',
+      'auth_guest_confirm_message':
+          'Mode tamu menyimpan data hanya di perangkat ini dan mungkin tidak tersinkron antar perangkat.',
+      'auth_guest_dont_show_again': 'Jangan tampilkan lagi',
+      'auth_usage_guide_title': 'Panduan Penggunaan Aplikasi',
+      'auth_acknowledgement_intro':
+          'Dengan menggunakan aplikasi FitScript AI, Anda menyatakan telah mengetahui Panduan Penggunaan Aplikasi, Privacy Policy, dan Terms and Conditions.',
+      'auth_acknowledgement_prefix':
+          'Dengan menggunakan aplikasi FitScript AI, Anda menyatakan telah mengetahui ',
     },
   };
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
@@ -51,6 +52,58 @@ class AccountAuthService {
 
   Future<LinkAccountResult> connectWithApple() async {
     try {
+      final provider = _appleProvider();
+      final currentUser = _firebaseAuth.currentUser;
+
+      if (currentUser != null && currentUser.isAnonymous) {
+        await currentUser.linkWithProvider(provider);
+        return const LinkAccountResult(
+          status: LinkAccountStatus.linked,
+          providerName: 'Apple',
+        );
+      }
+
+      await _firebaseAuth.signInWithProvider(provider);
+      return const LinkAccountResult(
+        status: LinkAccountStatus.signedInExisting,
+        providerName: 'Apple',
+      );
+    } on FirebaseAuthException catch (error) {
+      if (_isUserCancelledAppleError(error.code)) {
+        return const LinkAccountResult(
+          status: LinkAccountStatus.cancelled,
+          providerName: 'Apple',
+        );
+      }
+
+      if (error.code == 'credential-already-in-use' ||
+          error.code == 'provider-already-linked') {
+        await _firebaseAuth.signInWithProvider(_appleProvider());
+        return const LinkAccountResult(
+          status: LinkAccountStatus.signedInExisting,
+          providerName: 'Apple',
+        );
+      }
+
+      if (_shouldFallbackToPluginAppleFlow(error.code)) {
+        return _connectWithAppleUsingPlugin();
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<LinkAccountResult> _connectWithAppleUsingPlugin() async {
+    try {
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        throw FirebaseAuthException(
+          code: 'apple_not_available',
+          message:
+              'Sign in with Apple is not available on this device/account.',
+        );
+      }
+
       final rawNonce = _generateNonce();
       final nonce = _sha256ofString(rawNonce);
       final appleCredential = await SignInWithApple.getAppleIDCredential(
@@ -99,7 +152,6 @@ class AccountAuthService {
 
   Future<void> signOutToAnonymous() async {
     await _firebaseAuth.signOut();
-    await _firebaseAuth.signInAnonymously();
   }
 
   Future<DeleteAccountResult> deleteAccountAndContinueAnonymous() async {
@@ -110,7 +162,6 @@ class AccountAuthService {
 
     try {
       await user.delete();
-      await _firebaseAuth.signInAnonymously();
       return const DeleteAccountResult(status: DeleteAccountStatus.deleted);
     } on FirebaseAuthException catch (error) {
       if (error.code != 'requires-recent-login') {
@@ -146,7 +197,6 @@ class AccountAuthService {
 
       try {
         await user.delete();
-        await _firebaseAuth.signInAnonymously();
         return const DeleteAccountResult(status: DeleteAccountStatus.deleted);
       } on FirebaseAuthException catch (retryError) {
         return DeleteAccountResult(
@@ -217,6 +267,19 @@ class AccountAuthService {
 
     if (providerIds.contains('apple.com')) {
       try {
+        await user.reauthenticateWithProvider(_appleProvider());
+        return true;
+      } on FirebaseAuthException catch (error) {
+        if (_isUserCancelledAppleError(error.code)) {
+          return null;
+        }
+
+        if (!_shouldFallbackToPluginAppleFlow(error.code)) {
+          rethrow;
+        }
+      }
+
+      try {
         final rawNonce = _generateNonce();
         final nonce = _sha256ofString(rawNonce);
         final appleCredential = await SignInWithApple.getAppleIDCredential(
@@ -256,6 +319,25 @@ class AccountAuthService {
     return false;
   }
 
+  OAuthProvider _appleProvider() {
+    final provider = OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    return provider;
+  }
+
+  bool _isUserCancelledAppleError(String code) {
+    return code == 'canceled' ||
+        code == 'web-context-cancelled' ||
+        code == 'web-context-canceled';
+  }
+
+  bool _shouldFallbackToPluginAppleFlow(String code) {
+    return code == 'invalid-credential' ||
+        code == 'missing-or-invalid-nonce' ||
+        code == 'malformed-or-expired-credential';
+  }
+
   String _generateNonce([int length = 32]) {
     const chars =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
@@ -267,7 +349,7 @@ class AccountAuthService {
   }
 
   String _sha256ofString(String input) {
-    final bytes = input.codeUnits;
+    final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }

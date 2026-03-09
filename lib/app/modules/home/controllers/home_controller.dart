@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
@@ -9,6 +10,9 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/services/account_auth_service.dart';
@@ -19,9 +23,62 @@ import '../views/premium_upgrade_view.dart';
 
 enum LabHistoryStatus { normal, warning, improve }
 
+class BiomarkerTrendPoint {
+  const BiomarkerTrendPoint({
+    required this.score,
+    required this.dateLabel,
+    required this.analyzedAt,
+  });
+
+  final double score;
+  final String dateLabel;
+  final DateTime analyzedAt;
+}
+
+class BiomarkerTrendData {
+  const BiomarkerTrendData({
+    required this.signalKey,
+    required this.label,
+    required this.points,
+  });
+
+  final String signalKey;
+  final String label;
+  final List<BiomarkerTrendPoint> points;
+
+  List<double> get scores => points.map((point) => point.score).toList();
+
+  int get sampleCount => points.length;
+
+  double get delta {
+    if (scores.length < 2) return 0;
+    return scores.last - scores.first;
+  }
+
+  int get directionCode {
+    final value = delta;
+    if (value > 0.05) return 1;
+    if (value < -0.05) return -1;
+    return 0;
+  }
+}
+
+class BiomarkerTrendSummary {
+  const BiomarkerTrendSummary({
+    required this.label,
+    required this.directionCode,
+    required this.sampleCount,
+  });
+
+  final String label;
+  final int directionCode;
+  final int sampleCount;
+}
+
 class LabHistoryItem {
   const LabHistoryItem({
     required this.id,
+    required this.analyzedAt,
     required this.date,
     required this.title,
     required this.summary,
@@ -32,6 +89,7 @@ class LabHistoryItem {
   });
 
   final String id;
+  final DateTime analyzedAt;
   final String date;
   final String title;
   final String summary;
@@ -102,6 +160,9 @@ class HomeController extends GetxController {
   static const String _trialUsageAnalysisDeviceKey =
       'trial_usage_analysis_device';
   static const String _trialUsageSaveDeviceKey = 'trial_usage_save_device';
+  static const String _localGuestModeKey = 'local_guest_mode';
+  static const String _localGuestHistoryKey = 'local_guest_analysis_history_v1';
+  bool _isMigratingLocalGuestHistory = false;
 
   late final StreamSubscription<User?> _authSubscription;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
@@ -147,6 +208,12 @@ class HomeController extends GetxController {
 
   bool get isAnonymousUser => currentUser.value?.isAnonymous ?? true;
 
+  String get guestSessionTypeLabel {
+    final user = currentUser.value;
+    if (user == null) return 'profile_guest_session_local'.tr;
+    return 'profile_guest_session_firebase'.tr;
+  }
+
   int get totalHistories => analysisHistories.length;
 
   int get warningCount => analysisHistories
@@ -157,21 +224,164 @@ class HomeController extends GetxController {
       .where((item) => item.status == LabHistoryStatus.improve)
       .length;
 
+  List<LabHistoryItem> get trendHistories {
+    final source = analysisHistories.toList(growable: false);
+    source.sort((a, b) => a.analyzedAt.compareTo(b.analyzedAt));
+    return source;
+  }
+
+  List<double> get trendScores => trendHistories
+      .map(
+        (item) => switch (item.status) {
+          LabHistoryStatus.warning => 1.0,
+          LabHistoryStatus.normal => 2.0,
+          LabHistoryStatus.improve => 3.0,
+        },
+      )
+      .toList(growable: false);
+
+  List<BiomarkerTrendData> get biomarkerTrends {
+    final buckets = <String, List<BiomarkerTrendPoint>>{};
+
+    for (final history in trendHistories) {
+      final score = switch (history.status) {
+        LabHistoryStatus.warning => 1.0,
+        LabHistoryStatus.normal => 2.0,
+        LabHistoryStatus.improve => 3.0,
+      };
+
+      final normalizedSignals = history.signals
+          .map(_normalizeSignalKey)
+          .where((signal) => signal.isNotEmpty)
+          .toSet();
+      if (normalizedSignals.isEmpty) {
+        continue;
+      }
+
+      for (final signal in normalizedSignals) {
+        buckets
+            .putIfAbsent(signal, () => <BiomarkerTrendPoint>[])
+            .add(
+              BiomarkerTrendPoint(
+                score: score,
+                dateLabel: history.date,
+                analyzedAt: history.analyzedAt,
+              ),
+            );
+      }
+    }
+
+    final trends = buckets.entries
+        .where((entry) => entry.value.length >= 2)
+        .map(
+          (entry) => BiomarkerTrendData(
+            signalKey: entry.key,
+            label: _formatSignalLabel(entry.key),
+            points: List<BiomarkerTrendPoint>.unmodifiable(entry.value),
+          ),
+        )
+        .toList(growable: false);
+
+    trends.sort((a, b) {
+      final bySampleCount = b.sampleCount.compareTo(a.sampleCount);
+      if (bySampleCount != 0) return bySampleCount;
+      return b.delta.abs().compareTo(a.delta.abs());
+    });
+
+    return trends;
+  }
+
+  BiomarkerTrendData? get primaryBiomarkerTrend {
+    final trends = biomarkerTrends;
+    if (trends.isEmpty) return null;
+    return trends.first;
+  }
+
+  List<String> get secondaryBiomarkerTrendLabels {
+    final trends = biomarkerTrends;
+    if (trends.length <= 1) return const <String>[];
+    return trends.skip(1).take(3).map((trend) => trend.label).toList();
+  }
+
+  List<BiomarkerTrendSummary> get topBiomarkerTrendSummaries {
+    final trends = biomarkerTrends;
+    if (trends.isEmpty) return const <BiomarkerTrendSummary>[];
+    return trends
+        .take(3)
+        .map(
+          (trend) => BiomarkerTrendSummary(
+            label: trend.label,
+            directionCode: trend.directionCode,
+            sampleCount: trend.sampleCount,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<double> get chartTrendScores =>
+      primaryBiomarkerTrend?.scores ?? trendScores;
+
+  String get chartTrendStartDateLabel {
+    final primary = primaryBiomarkerTrend;
+    if (primary != null && primary.points.isNotEmpty) {
+      return primary.points.first.dateLabel;
+    }
+    final histories = trendHistories;
+    if (histories.isNotEmpty) {
+      return histories.first.date;
+    }
+    return '-';
+  }
+
+  String get chartTrendEndDateLabel {
+    final primary = primaryBiomarkerTrend;
+    if (primary != null && primary.points.isNotEmpty) {
+      return primary.points.last.dateLabel;
+    }
+    final histories = trendHistories;
+    if (histories.isNotEmpty) {
+      return histories.last.date;
+    }
+    return '-';
+  }
+
+  bool get canShowTrendAnalysis => chartTrendScores.length >= 2;
+
+  double get trendDelta {
+    final biomarkerDelta = primaryBiomarkerTrend?.delta;
+    if (biomarkerDelta != null) return biomarkerDelta;
+
+    final scores = chartTrendScores;
+    if (scores.length < 2) return 0;
+    return scores.last - scores.first;
+  }
+
+  String _normalizeSignalKey(String raw) {
+    final lowered = raw.toLowerCase().trim();
+    if (lowered.isEmpty) return '';
+    return lowered
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+  }
+
+  String _formatSignalLabel(String key) {
+    final cleaned = key.trim().replaceAll(RegExp(r'[_\-]+'), ' ');
+    if (cleaned.isEmpty) return key;
+    return cleaned
+        .split(RegExp(r'\s+'))
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
   @override
   void onInit() {
     super.onInit();
     _loadLanguagePreference();
     _loadFreeTrialLimits();
-    currentUser.value = FirebaseAuth.instance.currentUser;
-    _loadTrialUsageForUser(currentUser.value?.uid);
-    _bindAnalysisHistoryStream(currentUser.value?.uid);
-    _bindSubscriptionStatusStream(currentUser.value?.uid);
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
-      currentUser.value = user;
-      _loadTrialUsageForUser(user?.uid);
-      _bindAnalysisHistoryStream(user?.uid);
-      _bindSubscriptionStatusStream(user?.uid);
-    });
+    _syncAuthUserState(FirebaseAuth.instance.currentUser);
+    _authSubscription = FirebaseAuth.instance.userChanges().listen(
+      _syncAuthUserState,
+    );
   }
 
   @override
@@ -215,12 +425,116 @@ class HomeController extends GetxController {
         );
   }
 
+  void _syncAuthUserState(User? user) {
+    currentUser.value = user;
+    unawaited(_maybeMigrateLocalGuestHistoryToCloud(user));
+    _loadTrialUsageForUser(user?.uid);
+    _bindAnalysisHistoryStream(user?.uid);
+    _bindSubscriptionStatusStream(user?.uid);
+  }
+
+  Future<void> _maybeMigrateLocalGuestHistoryToCloud(User? user) async {
+    if (_isMigratingLocalGuestHistory) return;
+    if (user == null || user.isAnonymous) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final isLocalGuest = prefs.getBool(_localGuestModeKey) ?? false;
+    if (!isLocalGuest) return;
+
+    final rawList =
+        prefs.getStringList(_localGuestHistoryKey) ?? const <String>[];
+    if (rawList.isEmpty) {
+      await prefs.setBool(_localGuestModeKey, false);
+      return;
+    }
+
+    final localEntries = <Map<String, dynamic>>[];
+    for (final entry in rawList) {
+      try {
+        final decoded = jsonDecode(entry);
+        if (decoded is Map<String, dynamic>) {
+          localEntries.add(decoded);
+        }
+      } catch (_) {}
+    }
+
+    if (localEntries.isEmpty) {
+      await prefs.setBool(_localGuestModeKey, false);
+      await prefs.remove(_localGuestHistoryKey);
+      return;
+    }
+
+    _isMigratingLocalGuestHistory = true;
+    try {
+      final historyCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('analysis_history');
+
+      WriteBatch batch = FirebaseFirestore.instance.batch();
+      var opCount = 0;
+
+      for (final item in localEntries) {
+        final localId = (item['id'] ?? '').toString().trim();
+        final docId = localId.isNotEmpty
+            ? localId
+            : 'migrated_${DateTime.now().millisecondsSinceEpoch}_$opCount';
+
+        final createdAtMillis = (item['createdAtMillis'] as num?)?.toInt();
+        final createdAtTimestamp = createdAtMillis != null
+            ? Timestamp.fromMillisecondsSinceEpoch(createdAtMillis)
+            : FieldValue.serverTimestamp();
+
+        batch.set(historyCollection.doc(docId), {
+          'title': item['title'],
+          'summary': item['summary'],
+          'recommendation': item['recommendation'],
+          'signals': item['signals'] ?? const <String>[],
+          'nextSteps': item['nextSteps'] ?? const <String>[],
+          'status': item['status'] ?? 'normal',
+          'imageName': item['imageName'],
+          'fileName': item['fileName'],
+          'contentType': item['contentType'],
+          'originalFileSizeBytes': item['originalFileSizeBytes'],
+          'finalFileSizeBytes': item['finalFileSizeBytes'],
+          'isCompressed': item['isCompressed'],
+          'source': 'migrated_local_guest',
+          'createdAt': createdAtTimestamp,
+          'analyzedAt': createdAtTimestamp,
+        }, SetOptions(merge: true));
+
+        opCount++;
+        if (opCount >= 400) {
+          await batch.commit();
+          batch = FirebaseFirestore.instance.batch();
+          opCount = 0;
+        }
+      }
+
+      if (opCount > 0) {
+        await batch.commit();
+      }
+
+      await prefs.setBool(_localGuestModeKey, false);
+      await prefs.remove(_localGuestHistoryKey);
+    } catch (_) {
+      // keep local history untouched to retry on next auth sync
+    } finally {
+      _isMigratingLocalGuestHistory = false;
+    }
+  }
+
+  Future<void> _resetOnboardingCompletionFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_completed', false);
+  }
+
   void _bindAnalysisHistoryStream(String? uid) {
     _analysisHistorySubscription?.cancel();
 
     if (uid == null || uid.isEmpty) {
-      analysisHistories.assignAll(const <LabHistoryItem>[]);
-      isHistoryLoading.value = false;
+      isHistoryLoading.value = true;
+      _loadLocalGuestHistories();
       return;
     }
 
@@ -245,6 +559,117 @@ class HomeController extends GetxController {
             isHistoryLoading.value = false;
           },
         );
+  }
+
+  Future<bool> _isLocalGuestModeEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_localGuestModeKey) ?? false;
+  }
+
+  Future<void> _loadLocalGuestHistories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLocalGuest = prefs.getBool(_localGuestModeKey) ?? false;
+
+    if (!isLocalGuest) {
+      analysisHistories.assignAll(const <LabHistoryItem>[]);
+      isHistoryLoading.value = false;
+      return;
+    }
+
+    final rawList =
+        prefs.getStringList(_localGuestHistoryKey) ?? const <String>[];
+
+    final entries = <Map<String, dynamic>>[];
+    for (final entry in rawList) {
+      try {
+        final decoded = jsonDecode(entry);
+        if (decoded is Map<String, dynamic>) {
+          entries.add(decoded);
+        }
+      } catch (_) {}
+    }
+
+    entries.sort((a, b) {
+      final aTime = (a['createdAtMillis'] as num?)?.toInt() ?? 0;
+      final bTime = (b['createdAtMillis'] as num?)?.toInt() ?? 0;
+      return bTime.compareTo(aTime);
+    });
+
+    final items = entries
+        .map(
+          (entry) => _mapHistoryDocument((entry['id'] ?? '').toString(), entry),
+        )
+        .toList();
+
+    analysisHistories.assignAll(items);
+    isHistoryLoading.value = false;
+  }
+
+  Future<bool> _saveLocalGuestHistory(PendingLabAnalysis analysis) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList(_localGuestHistoryKey) ?? <String>[];
+
+    final nowMillis = DateTime.now().millisecondsSinceEpoch;
+    final id = 'local_$nowMillis';
+    final record = <String, dynamic>{
+      'id': id,
+      'title': analysis.title,
+      'summary': analysis.summary,
+      'recommendation': analysis.recommendation,
+      'signals': analysis.signals,
+      'nextSteps': analysis.nextSteps,
+      'status': switch (analysis.status) {
+        LabHistoryStatus.warning => 'warning',
+        LabHistoryStatus.improve => 'improve',
+        LabHistoryStatus.normal => 'normal',
+      },
+      'imageName': selectedLabImageName.value,
+      'fileName': selectedLabImageName.value,
+      'contentType': _selectedContentType,
+      'originalFileSizeBytes': selectedLabOriginalSizeBytes.value,
+      'finalFileSizeBytes': selectedLabFinalSizeBytes.value,
+      'isCompressed': isSelectedLabFileCompressed.value,
+      'source': 'home_capture_upload_local_guest',
+      'createdAtMillis': nowMillis,
+      'createdAt': DateTime.fromMillisecondsSinceEpoch(
+        nowMillis,
+      ).toIso8601String(),
+      'analyzedAt': DateTime.fromMillisecondsSinceEpoch(
+        nowMillis,
+      ).toIso8601String(),
+    };
+
+    rawList.add(jsonEncode(record));
+    final saved = await prefs.setStringList(_localGuestHistoryKey, rawList);
+    if (saved) {
+      await _loadLocalGuestHistories();
+    }
+    return saved;
+  }
+
+  Future<bool> _deleteLocalGuestHistory(String historyId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList(_localGuestHistoryKey) ?? <String>[];
+
+    final filtered = rawList.where((entry) {
+      try {
+        final decoded = jsonDecode(entry);
+        if (decoded is Map<String, dynamic>) {
+          return (decoded['id'] ?? '').toString() != historyId;
+        }
+      } catch (_) {}
+      return true;
+    }).toList();
+
+    if (filtered.length == rawList.length) {
+      return false;
+    }
+
+    final saved = await prefs.setStringList(_localGuestHistoryKey, filtered);
+    if (saved) {
+      await _loadLocalGuestHistories();
+    }
+    return saved;
   }
 
   LabHistoryItem _mapHistoryDocument(String docId, Map<String, dynamic> data) {
@@ -288,6 +713,7 @@ class HomeController extends GetxController {
 
     return LabHistoryItem(
       id: docId,
+      analyzedAt: date,
       date: _formatDate(date),
       title: title.isNotEmpty ? title : 'history_unknown_title'.tr,
       summary: summary.isNotEmpty ? summary : 'history_unknown_note'.tr,
@@ -818,7 +1244,8 @@ class HomeController extends GetxController {
 
   Future<bool> saveAnalyzedResult() async {
     final user = currentUser.value;
-    if (user == null) {
+    final isLocalGuest = user == null && await _isLocalGuestModeEnabled();
+    if (user == null && !isLocalGuest) {
       _showAppSnackbar(
         'home_save_failed_title'.tr,
         'home_save_failed_no_user'.tr,
@@ -843,31 +1270,43 @@ class HomeController extends GetxController {
 
     isSavingAnalysis.value = true;
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('analysis_history')
-          .add({
-            'title': analysis.title,
-            'summary': analysis.summary,
-            'recommendation': analysis.recommendation,
-            'signals': analysis.signals,
-            'nextSteps': analysis.nextSteps,
-            'status': switch (analysis.status) {
-              LabHistoryStatus.warning => 'warning',
-              LabHistoryStatus.improve => 'improve',
-              LabHistoryStatus.normal => 'normal',
-            },
-            'imageName': selectedLabImageName.value,
-            'fileName': selectedLabImageName.value,
-            'contentType': _selectedContentType,
-            'originalFileSizeBytes': selectedLabOriginalSizeBytes.value,
-            'finalFileSizeBytes': selectedLabFinalSizeBytes.value,
-            'isCompressed': isSelectedLabFileCompressed.value,
-            'source': 'home_capture_upload',
-            'createdAt': FieldValue.serverTimestamp(),
-            'analyzedAt': FieldValue.serverTimestamp(),
-          });
+      if (isLocalGuest) {
+        final isSavedLocal = await _saveLocalGuestHistory(analysis);
+        if (!isSavedLocal) {
+          _showAppSnackbar(
+            'home_save_failed_title'.tr,
+            'home_save_failed_message'.tr,
+            icon: Icons.error_outline,
+          );
+          return false;
+        }
+      } else {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user!.uid)
+            .collection('analysis_history')
+            .add({
+              'title': analysis.title,
+              'summary': analysis.summary,
+              'recommendation': analysis.recommendation,
+              'signals': analysis.signals,
+              'nextSteps': analysis.nextSteps,
+              'status': switch (analysis.status) {
+                LabHistoryStatus.warning => 'warning',
+                LabHistoryStatus.improve => 'improve',
+                LabHistoryStatus.normal => 'normal',
+              },
+              'imageName': selectedLabImageName.value,
+              'fileName': selectedLabImageName.value,
+              'contentType': _selectedContentType,
+              'originalFileSizeBytes': selectedLabOriginalSizeBytes.value,
+              'finalFileSizeBytes': selectedLabFinalSizeBytes.value,
+              'isCompressed': isSelectedLabFileCompressed.value,
+              'source': 'home_capture_upload',
+              'createdAt': FieldValue.serverTimestamp(),
+              'analyzedAt': FieldValue.serverTimestamp(),
+            });
+      }
 
       isCurrentAnalysisSaved.value = true;
       await _increaseTrialUsage(metric: 'save');
@@ -886,7 +1325,8 @@ class HomeController extends GetxController {
 
   Future<bool> deleteHistoryItem(LabHistoryItem history) async {
     final user = currentUser.value;
-    if (user == null) {
+    final isLocalGuest = user == null && await _isLocalGuestModeEnabled();
+    if (user == null && !isLocalGuest) {
       _showAppSnackbar(
         'history_delete_failed_title'.tr,
         'home_save_failed_no_user'.tr,
@@ -905,12 +1345,24 @@ class HomeController extends GetxController {
     }
 
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('analysis_history')
-          .doc(history.id)
-          .delete();
+      if (isLocalGuest) {
+        final isDeletedLocal = await _deleteLocalGuestHistory(history.id);
+        if (!isDeletedLocal) {
+          _showAppSnackbar(
+            'history_delete_failed_title'.tr,
+            'history_delete_failed_message'.tr,
+            icon: Icons.error_outline,
+          );
+          return false;
+        }
+      } else {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user!.uid)
+            .collection('analysis_history')
+            .doc(history.id)
+            .delete();
+      }
       return true;
     } catch (_) {
       _showAppSnackbar(
@@ -922,13 +1374,118 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> exportHistoryToPdf(LabHistoryItem history) async {
+    if (!isPremiumUser.value) {
+      _showAppSnackbar(
+        'history_export_premium_title'.tr,
+        'history_export_premium_message'.tr,
+        icon: Icons.lock_outline,
+      );
+      upgradeToPremium();
+      return;
+    }
+
+    try {
+      final statusLabel = switch (history.status) {
+        LabHistoryStatus.warning => 'history_status_warning'.tr,
+        LabHistoryStatus.improve => 'history_status_improve'.tr,
+        LabHistoryStatus.normal => 'history_status_normal'.tr,
+      };
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => [
+            pw.Text(
+              'FitScript AI',
+              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 6),
+            pw.Text(
+              'home_analysis_result_title'.tr,
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 14),
+            pw.Text(history.title, style: const pw.TextStyle(fontSize: 16)),
+            pw.SizedBox(height: 6),
+            pw.Text('${'history_date_label'.tr}: ${history.date}'),
+            pw.Text('${'history_status_label'.tr}: $statusLabel'),
+            pw.SizedBox(height: 12),
+            pw.Text(
+              'home_analysis_findings_label'.tr,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              history.signals.isEmpty
+                  ? '-'
+                  : history.signals
+                        .map((signal) => signal.trim())
+                        .where((signal) => signal.isNotEmpty)
+                        .join(', '),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text(
+              'home_analysis_recommendation_label'.tr,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              history.recommendation.isEmpty ? '-' : history.recommendation,
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text(
+              'home_analysis_next_steps_label'.tr,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            if (history.nextSteps.isEmpty)
+              pw.Text('-')
+            else
+              ...history.nextSteps.map(
+                (step) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 2),
+                  child: pw.Text('• $step'),
+                ),
+              ),
+          ],
+        ),
+      );
+
+      final fileSafeTitle = history.title
+          .replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_')
+          .replaceAll(RegExp(r'_+'), '_')
+          .replaceAll(RegExp(r'^_|_$'), '');
+      final fileName =
+          'fitscript_${fileSafeTitle.isEmpty ? 'report' : fileSafeTitle}.pdf';
+
+      await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
+
+      _showAppSnackbar(
+        'history_export_success_title'.tr,
+        'history_export_success_message'.tr,
+        icon: Icons.picture_as_pdf_outlined,
+      );
+    } catch (_) {
+      _showAppSnackbar(
+        'history_export_failed_title'.tr,
+        'history_export_failed_message'.tr,
+        icon: Icons.error_outline,
+      );
+    }
+  }
+
   void openPrivacyPolicy() async {
     final hasAccepted = await _hasAcceptedConsent('privacy_policy');
+    final isIndonesian = selectedLanguageCode.value == 'id';
 
     Get.to<bool>(
       () => LegalDocumentView(
         title: 'legal_privacy_title'.tr,
-        assetPath: 'assets/jsons/privacy_policy_fitscript_ai.md',
+        assetPath: isIndonesian
+            ? 'assets/jsons/privacy_policy_fitscript_ai_id.md'
+            : 'assets/jsons/privacy_policy_fitscript_ai.md',
         showAgreementAction: !hasAccepted,
         agreementButtonLabel: 'legal_agree_button'.tr,
       ),
@@ -943,13 +1500,28 @@ class HomeController extends GetxController {
     });
   }
 
+  void openUsageGuide() {
+    final isIndonesian = selectedLanguageCode.value == 'id';
+    Get.to<void>(
+      () => LegalDocumentView(
+        title: 'auth_usage_guide_title'.tr,
+        assetPath: isIndonesian
+            ? 'assets/jsons/usage_guide_fitscript_ai.md'
+            : 'assets/jsons/usage_guide_fitscript_ai_en.md',
+      ),
+    );
+  }
+
   void openTermsAndConditions() async {
     final hasAccepted = await _hasAcceptedConsent('terms_and_conditions');
+    final isIndonesian = selectedLanguageCode.value == 'id';
 
     Get.to<bool>(
       () => LegalDocumentView(
         title: 'legal_terms_title'.tr,
-        assetPath: 'assets/jsons/terms_and_conditions_fitscript_ai.md',
+        assetPath: isIndonesian
+            ? 'assets/jsons/terms_and_conditions_fitscript_ai_id.md'
+            : 'assets/jsons/terms_and_conditions_fitscript_ai.md',
         showAgreementAction: !hasAccepted,
         agreementButtonLabel: 'legal_agree_button'.tr,
       ),
@@ -1021,6 +1593,7 @@ class HomeController extends GetxController {
   }
 
   Future<void> signOut() async {
+    final isGuest = isAnonymousUser;
     final theme = Get.theme;
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
@@ -1031,8 +1604,16 @@ class HomeController extends GetxController {
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
         ),
-        title: Text('profile_sign_out_confirm_title'.tr),
-        content: Text('profile_sign_out_confirm_message'.tr),
+        title: Text(
+          isGuest
+              ? 'profile_guest_exit_confirm_title'.tr
+              : 'profile_sign_out_confirm_title'.tr,
+        ),
+        content: Text(
+          isGuest
+              ? 'profile_guest_exit_confirm_message'.tr
+              : 'profile_sign_out_confirm_message'.tr,
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -1043,7 +1624,11 @@ class HomeController extends GetxController {
           ),
           FilledButton(
             onPressed: () => Get.back(result: true),
-            child: Text('profile_sign_out_button'.tr),
+            child: Text(
+              isGuest
+                  ? 'profile_guest_exit_button'.tr
+                  : 'profile_sign_out_button'.tr,
+            ),
           ),
         ],
       ),
@@ -1053,8 +1638,16 @@ class HomeController extends GetxController {
     if (confirmed != true) return;
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      if (isGuest) {
+        await prefs.setBool(_localGuestModeKey, false);
+        Get.offAllNamed(Routes.AUTH);
+        return;
+      }
+
       await _accountAuthService.signOutToAnonymous();
-      Get.offAllNamed(Routes.ONBOARDING);
+      await prefs.setBool(_localGuestModeKey, false);
+      Get.offAllNamed(Routes.AUTH);
     } catch (_) {
       _showAppSnackbar(
         'profile_sign_out_failed_title'.tr,
@@ -1117,6 +1710,7 @@ class HomeController extends GetxController {
 
       switch (result.status) {
         case DeleteAccountStatus.deleted:
+          await _resetOnboardingCompletionFlag();
           _showAppSnackbar(
             'profile_delete_success_title'.tr,
             'profile_delete_success_message'.tr,
@@ -1170,6 +1764,7 @@ class HomeController extends GetxController {
       final result = await _accountAuthService.connectWithGoogle();
       switch (result.status) {
         case LinkAccountStatus.linked:
+          _syncAuthUserState(FirebaseAuth.instance.currentUser);
           _showAppSnackbar(
             'profile_link_success_title'.tr,
             'profile_link_success_message'.trParams({
@@ -1179,6 +1774,7 @@ class HomeController extends GetxController {
           );
           break;
         case LinkAccountStatus.signedInExisting:
+          _syncAuthUserState(FirebaseAuth.instance.currentUser);
           _showAppSnackbar(
             'profile_login_success_title'.tr,
             'profile_login_success_message'.trParams({
@@ -1211,6 +1807,7 @@ class HomeController extends GetxController {
       final result = await _accountAuthService.connectWithApple();
       switch (result.status) {
         case LinkAccountStatus.linked:
+          _syncAuthUserState(FirebaseAuth.instance.currentUser);
           _showAppSnackbar(
             'profile_link_success_title'.tr,
             'profile_link_success_message'.trParams({
@@ -1220,6 +1817,7 @@ class HomeController extends GetxController {
           );
           break;
         case LinkAccountStatus.signedInExisting:
+          _syncAuthUserState(FirebaseAuth.instance.currentUser);
           _showAppSnackbar(
             'profile_login_success_title'.tr,
             'profile_login_success_message'.trParams({
@@ -1257,6 +1855,11 @@ class HomeController extends GetxController {
       'account-exists-with-different-credential' =>
         'profile_auth_error_different_credential'.tr,
       'invalid-credential' => 'profile_auth_error_invalid_credential'.tr,
+      'operation-not-allowed' => 'profile_auth_error_apple_setup'.tr,
+      'apple_not_available' => 'profile_auth_error_apple_not_available'.tr,
+      'missing-or-invalid-nonce' => 'profile_auth_error_apple_setup'.tr,
+      'malformed-or-expired-credential' =>
+        'profile_auth_error_invalid_credential'.tr,
       'apple_missing_identity_token' => 'profile_auth_error_apple_setup'.tr,
       'apple_invalid_response' ||
       'apple_not_handled' ||

@@ -101,49 +101,111 @@ class _HistoryPage extends StatelessWidget {
           final theme = Theme.of(context);
           final histories = controller.analysisHistories;
           final isLoading = controller.isHistoryLoading.value;
+          final isPremium = controller.isPremiumUser.value;
+          final trendScores = controller.chartTrendScores;
+          final trendStartDate = controller.chartTrendStartDateLabel;
+          final trendEndDate = controller.chartTrendEndDateLabel;
+          final canShowTrend = controller.canShowTrendAnalysis;
+          final trendDelta = controller.trendDelta;
+          final primaryTrend = controller.primaryBiomarkerTrend;
+          final secondaryTrendLabels = controller.secondaryBiomarkerTrendLabels;
+          final topBiomarkerTrends = controller.biomarkerTrends
+              .take(3)
+              .toList();
+          final trendMessage = trendDelta > 0.05
+              ? 'history_trend_up'.tr
+              : trendDelta < -0.05
+              ? 'history_trend_down'.tr
+              : 'history_trend_stable'.tr;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
             children: [
-              Card(
-                elevation: 2,
-                color: theme.colorScheme.surfaceContainer,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.42,
+                    ),
+                  ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: EdgeInsets.zero,
+                  child: Column(
                     children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.history_edu_outlined,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'history_title'.tr,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'history_subtitle'.tr,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(
-                          Icons.history_edu_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Text(
-                              'history_title'.tr,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
+                            Icon(
+                              Icons.timeline_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${controller.totalHistories} ${'history_metric_total'.tr.toLowerCase()}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'history_subtitle'.tr,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                            _StatusChip(
+                              status: controller.warningCount > 0
+                                  ? LabHistoryStatus.warning
+                                  : LabHistoryStatus.normal,
                             ),
                           ],
                         ),
@@ -181,45 +243,256 @@ class _HistoryPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
+              if (histories.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.38,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.show_chart_outlined,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'history_trend_title'.tr,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'history_trend_subtitle'.tr,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (isPremium && primaryTrend != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'history_trend_focus_label'.trParams({
+                            'marker': primaryTrend.label,
+                          }),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      if (!isPremium) ...[
+                        Text(
+                          'history_trend_premium_message'.tr,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        FilledButton.tonalIcon(
+                          onPressed: controller.upgradeToPremium,
+                          icon: const Icon(Icons.workspace_premium_outlined),
+                          label: Text('premium_cta_upgrade'.tr),
+                        ),
+                      ] else if (canShowTrend) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 88,
+                          child: _TrendSparkline(
+                            points: trendScores,
+                            lineColor: theme.colorScheme.primary,
+                            fillColor: theme.colorScheme.primaryContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                trendStartDate,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              trendEndDate,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          trendMessage,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (secondaryTrendLabels.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'history_trend_other_markers'.trParams({
+                              'markers': secondaryTrendLabels.join(', '),
+                            }),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        if (topBiomarkerTrends.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            'history_trend_breakdown_title'.tr,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          ...topBiomarkerTrends.map(
+                            (trend) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () =>
+                                      _showBiomarkerTrendDetail(context, trend),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 4,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          trend.directionCode > 0
+                                              ? Icons.trending_up_rounded
+                                              : trend.directionCode < 0
+                                              ? Icons.trending_down_rounded
+                                              : Icons.trending_flat_rounded,
+                                          size: 16,
+                                          color: trend.directionCode > 0
+                                              ? theme.colorScheme.primary
+                                              : trend.directionCode < 0
+                                              ? theme.colorScheme.error
+                                              : theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'history_trend_breakdown_item'.trParams({
+                                              'marker': trend.label,
+                                              'count': '${trend.sampleCount}',
+                                              'direction':
+                                                  trend.directionCode > 0
+                                                  ? 'history_trend_direction_up'
+                                                        .tr
+                                                  : trend.directionCode < 0
+                                                  ? 'history_trend_direction_down'
+                                                        .tr
+                                                  : 'history_trend_direction_flat'
+                                                        .tr,
+                                            }),
+                                            style: theme.textTheme.bodySmall,
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 18,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ] else ...[
+                        Text(
+                          'history_trend_not_enough_data'.tr,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               if (isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (histories.isEmpty)
-                Card(
+                Container(
                   margin: EdgeInsets.zero,
-                  elevation: 2,
-                  color: theme.colorScheme.surfaceContainer,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'history_empty_title'.tr,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'history_empty_subtitle'.tr,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.36,
+                      ),
                     ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.timeline_outlined,
+                          size: 28,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'history_empty_title'.tr,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'history_empty_subtitle'.tr,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.35,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 )
               else
@@ -299,6 +572,15 @@ class _HistoryPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(history.date, style: theme.textTheme.bodySmall),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => controller.exportHistoryToPdf(history),
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: Text('history_export_button'.tr),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -515,6 +797,142 @@ class _HistoryPage extends StatelessWidget {
         .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
         .join(' ');
   }
+
+  void _showBiomarkerTrendDetail(
+    BuildContext context,
+    BiomarkerTrendData trend,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final directionText = trend.directionCode > 0
+            ? 'history_trend_direction_up'.tr
+            : trend.directionCode < 0
+            ? 'history_trend_direction_down'.tr
+            : 'history_trend_direction_flat'.tr;
+
+        return SafeArea(
+          bottom: false,
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.86,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: [
+                Align(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'history_trend_detail_title'.trParams({
+                    'marker': trend.label,
+                  }),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'history_trend_detail_subtitle'.trParams({
+                    'count': '${trend.sampleCount}',
+                    'direction': directionText,
+                  }),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 90,
+                  child: _TrendSparkline(
+                    points: trend.scores,
+                    lineColor: theme.colorScheme.primary,
+                    fillColor: theme.colorScheme.primaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        trend.points.first.dateLabel,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      trend.points.last.dateLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'history_trend_detail_points_title'.tr,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: trend.points.asMap().entries.map((entry) {
+                    final index = entry.key + 1;
+                    final point = entry.value;
+                    final statusLabel = point.score <= 1.5
+                        ? 'history_status_warning'.tr
+                        : point.score >= 2.5
+                        ? 'history_status_improve'.tr
+                        : 'history_status_normal'.tr;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'history_trend_detail_point_item'.trParams({
+                          'index': '$index',
+                          'date': point.dateLabel,
+                          'status': statusLabel,
+                        }),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _HistoryRecordCard extends StatelessWidget {
@@ -531,65 +949,100 @@ class _HistoryRecordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final statusColor = switch (history.status) {
+      LabHistoryStatus.warning => theme.colorScheme.error,
+      LabHistoryStatus.improve => theme.colorScheme.primary,
+      LabHistoryStatus.normal => theme.colorScheme.secondary,
+    };
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 2,
-      color: theme.colorScheme.surfaceContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-        ),
-      ),
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: theme.colorScheme.surfaceContainer,
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.42),
+            ),
+          ),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      history.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'profile_delete_button'.tr,
-                    onPressed: onDelete,
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: theme.colorScheme.error,
-                    ),
-                  ),
-                  _StatusChip(status: history.status),
-                ],
-              ),
-              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                width: 4,
+                height: 132,
+                margin: const EdgeInsets.only(left: 10),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
+                  color: statusColor.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text(history.date, style: theme.textTheme.bodySmall),
               ),
-              const SizedBox(height: 8),
-              Text(
-                history.note,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              history.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _StatusChip(status: history.status),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            tooltip: 'profile_delete_button'.tr,
+                            onPressed: onDelete,
+                            visualDensity: VisualDensity.compact,
+                            icon: Icon(
+                              Icons.delete_outline_rounded,
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              history.date,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        history.note,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -597,6 +1050,95 @@ class _HistoryRecordCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _TrendSparkline extends StatelessWidget {
+  const _TrendSparkline({
+    required this.points,
+    required this.lineColor,
+    required this.fillColor,
+  });
+
+  final List<double> points;
+  final Color lineColor;
+  final Color fillColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _TrendSparklinePainter(
+        points: points,
+        lineColor: lineColor,
+        fillColor: fillColor,
+      ),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _TrendSparklinePainter extends CustomPainter {
+  const _TrendSparklinePainter({
+    required this.points,
+    required this.lineColor,
+    required this.fillColor,
+  });
+
+  final List<double> points;
+  final Color lineColor;
+  final Color fillColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+
+    const minValue = 1.0;
+    const maxValue = 3.0;
+    final xStep = size.width / (points.length - 1);
+
+    final linePath = Path();
+    final areaPath = Path();
+
+    for (var i = 0; i < points.length; i++) {
+      final normalized = ((points[i] - minValue) / (maxValue - minValue)).clamp(
+        0.0,
+        1.0,
+      );
+      final x = i * xStep;
+      final y = size.height - (normalized * (size.height - 8)) - 4;
+
+      if (i == 0) {
+        linePath.moveTo(x, y);
+        areaPath.moveTo(x, size.height);
+        areaPath.lineTo(x, y);
+      } else {
+        linePath.lineTo(x, y);
+        areaPath.lineTo(x, y);
+      }
+    }
+
+    areaPath.lineTo(size.width, size.height);
+    areaPath.close();
+
+    final areaPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = fillColor.withValues(alpha: 0.34);
+    canvas.drawPath(areaPath, areaPaint);
+
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = lineColor;
+    canvas.drawPath(linePath, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrendSparklinePainter oldDelegate) {
+    return oldDelegate.points != points ||
+        oldDelegate.lineColor != lineColor ||
+        oldDelegate.fillColor != fillColor;
   }
 }
 
@@ -680,6 +1222,58 @@ class _ProfilePage extends StatelessWidget {
                             }),
                       style: theme.textTheme.bodyMedium,
                     ),
+                    if (isAnonymous) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(
+                              alpha: 0.34,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text:
+                                          '${'profile_guest_session_label'.tr}: ',
+                                    ),
+                                    TextSpan(
+                                      text: controller.guestSessionTypeLabel,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     if (isAnonymous) ...[
                       SizedBox(
@@ -770,6 +1364,12 @@ class _ProfilePage extends StatelessWidget {
                 child: Column(
                   children: [
                     _ProfileActionTile(
+                      icon: Icons.menu_book_outlined,
+                      title: 'auth_usage_guide_title'.tr,
+                      onTap: controller.openUsageGuide,
+                    ),
+                    const Divider(height: 1),
+                    _ProfileActionTile(
                       icon: Icons.privacy_tip_outlined,
                       title: 'profile_privacy_policy'.tr,
                       onTap: controller.openPrivacyPolicy,
@@ -842,7 +1442,7 @@ class _ProfilePage extends StatelessWidget {
                         child: Text('profile_upgrade_button'.tr),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -850,16 +1450,27 @@ class _ProfilePage extends StatelessWidget {
                         child: Text('profile_restore_button'.tr),
                       ),
                     ),
-                    if (!isAnonymous) ...[
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: controller.signOut,
-                          child: Text('profile_sign_out_button'.tr),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: controller.signOut,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.colorScheme.onSurfaceVariant,
+                          side: BorderSide(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        icon: Icon(
+                          isAnonymous ? Icons.logout : Icons.logout_outlined,
+                        ),
+                        label: Text(
+                          isAnonymous
+                              ? 'profile_guest_exit_button'.tr
+                              : 'profile_sign_out_button'.tr,
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -875,100 +1486,140 @@ class _ProfilePage extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       backgroundColor: theme.colorScheme.surfaceContainer,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (context) {
         return SafeArea(
+          bottom: false,
           child: Obx(() {
             final selected = controller.selectedLanguageCode.value;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: theme.colorScheme.surfaceContainerHighest,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.language,
-                      color: theme.colorScheme.onPrimaryContainer,
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                4,
+                16,
+                16 + MediaQuery.of(context).viewPadding.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'profile_language'.tr,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  title: Text('profile_language_english'.tr),
-                  trailing: selected == 'en'
-                      ? Icon(
-                          Icons.check_circle,
-                          color: theme.colorScheme.primary,
-                        )
-                      : Icon(
-                          Icons.chevron_right,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    await controller.changeLanguage('en');
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: theme.colorScheme.surfaceContainerHighest,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.language,
-                      color: theme.colorScheme.onSecondaryContainer,
+                  const SizedBox(height: 4),
+                  Text(
+                    controller.selectedLanguageLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  title: Text('profile_language_indonesian'.tr),
-                  trailing: selected == 'id'
-                      ? Icon(
-                          Icons.check_circle,
-                          color: theme.colorScheme.primary,
-                        )
-                      : Icon(
-                          Icons.chevron_right,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    await controller.changeLanguage('id');
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 12),
+                  _buildLanguageOptionTile(
+                    context: context,
+                    code: 'en',
+                    selected: selected,
+                    label: 'profile_language_english'.tr,
                   ),
-                  tileColor: theme.colorScheme.tertiaryContainer.withValues(
-                    alpha: 0.62,
+                  const SizedBox(height: 8),
+                  _buildLanguageOptionTile(
+                    context: context,
+                    code: 'id',
+                    selected: selected,
+                    label: 'profile_language_indonesian'.tr,
                   ),
-                  title: Text('profile_close'.tr, textAlign: TextAlign.center),
-                  trailing: Icon(
-                    Icons.close_rounded,
-                    color: theme.colorScheme.onTertiaryContainer,
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      label: Text('profile_close'.tr),
+                    ),
                   ),
-                  onTap: () => Navigator.of(context).pop(),
-                ),
-              ],
+                ],
+              ),
             );
           }),
         );
       },
+    );
+  }
+
+  Widget _buildLanguageOptionTile({
+    required BuildContext context,
+    required String code,
+    required String selected,
+    required String label,
+  }) {
+    final theme = Theme.of(context);
+    final isSelected = selected == code;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () async {
+        Navigator.of(context).pop();
+        await controller.changeLanguage(code);
+      },
+      child: Ink(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.34),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.language_rounded,
+                size: 20,
+                color: isSelected
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? theme.colorScheme.onPrimaryContainer
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: isSelected
+                    ? Icon(
+                        Icons.check_circle_rounded,
+                        key: const ValueKey('selected-language'),
+                        color: theme.colorScheme.primary,
+                      )
+                    : Icon(
+                        Icons.circle_outlined,
+                        key: const ValueKey('unselected-language'),
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
