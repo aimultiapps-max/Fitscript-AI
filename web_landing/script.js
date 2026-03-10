@@ -35,6 +35,73 @@ const docConfig = {
   },
 };
 
+const landingCopy = {
+  en: {
+    hero: {
+      title: "FitScript AI",
+      subtitle: "Official app information and legal documents",
+    },
+    about: {
+      label: "About App",
+      title: "Why people choose FitScript AI",
+      desc: "AI-powered health companion built for clarity and privacy.",
+      items: ["Real-time lab result scanning with contextual explanations.", "Trend dashboards to understand long-term health signals.", "Secure-by-design cloud with anonymous onboarding path."],
+    },
+    support: {
+      label: "Support Information",
+      title: "Need help or have compliance questions?",
+      desc: "We respond fast across official channels.",
+      items: ['<strong>Email</strong>: <a href="mailto:support@fitscript.ai">support@fitscript.ai</a>', "Response window: under 24 hours on business days.", "Data deletion / portability requests processed within 7 business days."],
+      cta: {
+        text: "Contact Support",
+        href: "mailto:support@fitscript.ai",
+      },
+    },
+    marketing: {
+      label: "Marketing Information",
+      title: "Brand, assets, and press-ready copy",
+      desc: "Everything you need to feature FitScript AI accurately.",
+      items: ["One-liner, pitch paragraph, and storefront keywords.", "Downloadable icon pack, hero renders, screenshot frames.", "Medical disclaimer template for promotional materials."],
+      cta: {
+        text: "Request media kit →",
+        href: "mailto:support@fitscript.ai?subject=FitScript%20AI%20media%20kit",
+      },
+    },
+  },
+  id: {
+    hero: {
+      title: "FitScript AI",
+      subtitle: "Informasi resmi aplikasi dan dokumen hukum",
+    },
+    about: {
+      label: "Tentang Aplikasi",
+      title: "Kenapa banyak pengguna memilih FitScript AI",
+      desc: "Pendamping kesehatan berbasis AI yang fokus pada kejelasan dan privasi.",
+      items: ["Pemindaian hasil lab instan dengan penjelasan kontekstual.", "Panel tren untuk membaca sinyal kesehatan jangka panjang.", "Cloud aman dengan opsi mulai anonim tanpa akun."],
+    },
+    support: {
+      label: "Informasi Dukungan",
+      title: "Butuh bantuan atau dokumen kepatuhan?",
+      desc: "Tim kami responsif melalui kanal resmi.",
+      items: ['<strong>Email</strong>: <a href="mailto:support@fitscript.ai">support@fitscript.ai</a>', "Waktu respons: maksimal 24 jam di hari kerja.", "Permintaan penghapusan / portabilitas diproses maksimal 7 hari kerja."],
+      cta: {
+        text: "Hubungi Dukungan",
+        href: "mailto:support@fitscript.ai",
+      },
+    },
+    marketing: {
+      label: "Informasi Marketing",
+      title: "Brand, aset, dan materi pers",
+      desc: "Semua kebutuhan untuk menampilkan FitScript AI secara akurat.",
+      items: ["Kalimat promosi singkat, paragraf pitch, dan kata kunci store.", "Unduhan paket ikon, render hero, dan bingkai screenshot.", "Template disclaimer medis untuk materi promosi."],
+      cta: {
+        text: "Minta media kit →",
+        href: "mailto:support@fitscript.ai?subject=Permintaan%20media%20kit%20FitScript%20AI",
+      },
+    },
+  },
+};
+
 const guideContent = document.getElementById("guide-content");
 const privacyContent = document.getElementById("privacy-content");
 const termsContent = document.getElementById("terms-content");
@@ -49,6 +116,26 @@ const termsDesc = document.getElementById("terms-desc");
 
 const langEn = document.getElementById("lang-en");
 const langId = document.getElementById("lang-id");
+
+const aboutLabel = document.getElementById("about-label");
+const aboutTitle = document.getElementById("about-title");
+const aboutDesc = document.getElementById("about-desc");
+const aboutList = document.getElementById("about-list");
+
+const supportLabel = document.getElementById("support-label");
+const supportTitle = document.getElementById("support-title");
+const supportDesc = document.getElementById("support-desc");
+const supportList = document.getElementById("support-list");
+const supportCta = document.getElementById("support-cta");
+
+const marketingLabel = document.getElementById("marketing-label");
+const marketingTitle = document.getElementById("marketing-title");
+const marketingDesc = document.getElementById("marketing-desc");
+const marketingList = document.getElementById("marketing-list");
+const marketingCta = document.getElementById("marketing-cta");
+
+const heroTitle = document.getElementById("hero-title");
+const heroSubtitle = document.getElementById("hero-subtitle");
 
 document.getElementById("year").textContent = new Date().getFullYear();
 
@@ -124,6 +211,7 @@ async function fetchText(path) {
 
 async function loadLanguage(lang) {
   const conf = docConfig[lang] || docConfig.en;
+  applyLandingCopy(lang);
 
   guideTitle.textContent = conf.guide.title;
   privacyTitle.textContent = conf.privacy.title;
@@ -149,6 +237,42 @@ async function loadLanguage(lang) {
     privacyContent.innerHTML = `<p>${message}</p>`;
     termsContent.innerHTML = `<p>${message}</p>`;
   }
+}
+
+function applyLandingCopy(lang) {
+  const copy = landingCopy[lang] || landingCopy.en;
+  const fillList = (ul, items) => {
+    ul.innerHTML = "";
+    items.forEach((item) => {
+      const li = document.createElement("li");
+      li.innerHTML = item;
+      ul.appendChild(li);
+    });
+  };
+
+  aboutLabel.textContent = copy.about.label;
+  aboutTitle.textContent = copy.about.title;
+  aboutDesc.textContent = copy.about.desc;
+  fillList(aboutList, copy.about.items);
+
+  heroTitle.textContent = copy.hero.title;
+  heroSubtitle.textContent = copy.hero.subtitle;
+
+  supportLabel.textContent = copy.support.label;
+  supportTitle.textContent = copy.support.title;
+  supportDesc.textContent = copy.support.desc;
+  fillList(supportList, copy.support.items);
+  supportCta.textContent = copy.support.cta.text;
+  supportCta.onclick = () => {
+    window.location.href = copy.support.cta.href;
+  };
+
+  marketingLabel.textContent = copy.marketing.label;
+  marketingTitle.textContent = copy.marketing.title;
+  marketingDesc.textContent = copy.marketing.desc;
+  fillList(marketingList, copy.marketing.items);
+  marketingCta.textContent = copy.marketing.cta.text;
+  marketingCta.setAttribute("href", copy.marketing.cta.href);
 }
 
 langEn.addEventListener("click", () => {

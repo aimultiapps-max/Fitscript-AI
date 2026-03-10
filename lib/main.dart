@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get/get.dart';
 
 import 'app/core/themes/app_theme.dart';
+import 'app/core/services/app_update_service.dart';
 import 'app/core/translations/app_translations.dart';
 import 'app/routes/app_pages.dart';
 
@@ -29,6 +30,8 @@ void main() async {
       ? Routes.ONBOARDING
       : ((currentUser == null && !localGuestMode) ? Routes.AUTH : Routes.HOME);
 
+  final appUpdateService = Get.put(AppUpdateService(), permanent: true);
+
   runApp(
     GetMaterialApp(
       debugShowCheckedModeBanner: false,
@@ -43,6 +46,10 @@ void main() async {
       getPages: AppPages.routes,
     ),
   );
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    appUpdateService.checkForUpdateIfNeeded();
+  });
 }
 
 Future<void> _activateFirebaseAppCheck() async {

@@ -14,8 +14,8 @@
           <div class="hero-brand">
             <img src="./app-icon.png" alt="FitScript AI logo" class="app-logo" />
             <div class="brand-text">
-              <h1>FitScript AI</h1>
-              <p class="subtitle">Official app information and legal documents</p>
+              <h1 id="hero-title">FitScript AI</h1>
+              <p class="subtitle" id="hero-subtitle">Official app information and legal documents</p>
             </div>
           </div>
           <nav class="quick-links" aria-label="Legal pages">
@@ -39,6 +39,43 @@
     </header>
 
     <main class="container sections">
+      <section class="info-grid" aria-label="FitScript AI overview">
+        <article class="info-card" id="about-card">
+          <p class="eyebrow" id="about-label">About App</p>
+          <h2 id="about-title">Why people choose FitScript AI</h2>
+          <p id="about-desc">AI-powered health companion built for clarity and privacy.</p>
+          <ul class="info-list" id="about-list">
+            <li>Real-time lab result scanning with contextual explanations.</li>
+            <li>Trend dashboards to understand long-term health signals.</li>
+            <li>Secure-by-design cloud with anonymous onboarding path.</li>
+          </ul>
+        </article>
+
+        <article class="info-card" id="support-card">
+          <p class="eyebrow" id="support-label">Support Information</p>
+          <h2 id="support-title">Need help or have compliance questions?</h2>
+          <p id="support-desc">We respond fast across our official channels.</p>
+          <ul class="info-list" id="support-list">
+            <li><strong>Email</strong>: <a href="mailto:support@fitscript.ai">support@fitscript.ai</a></li>
+            <li><strong>Response window</strong>: under 24 hours on business days.</li>
+            <li><strong>Data requests</strong>: handled within 7 business days.</li>
+          </ul>
+          <button class="ghost-btn" id="support-cta" type="button">Contact Support</button>
+        </article>
+
+        <article class="info-card" id="marketing-card">
+          <p class="eyebrow" id="marketing-label">Marketing Information</p>
+          <h2 id="marketing-title">Brand, assets, and press-ready copy</h2>
+          <p id="marketing-desc">Everything you need to feature FitScript AI accurately.</p>
+          <ul class="info-list" id="marketing-list">
+            <li>One-liner, pitch paragraph, and store listing keywords.</li>
+            <li>Downloadable icon pack, hero renders, and screenshot frames.</li>
+            <li>Medical disclaimer template for promotional materials.</li>
+          </ul>
+          <a class="primary-link" id="marketing-cta" href="./doc-page" target="_blank" rel="noreferrer">Open media kit →</a>
+        </article>
+      </section>
+
       <section class="card doc-card">
         <h2 id="guide-title">Usage Guide</h2>
         <p id="guide-desc">How to use FitScript AI safely and effectively.</p>

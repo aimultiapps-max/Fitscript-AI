@@ -22,8 +22,8 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
   int _selectedPlanIndex = 0;
   String _iosMonthlyProductId = 'com.aimultiapps.fitscriptAi.premium.monthly';
   String _iosYearlyProductId = 'com.aimultiapps.fitscriptAi.premium.yearly';
-  String _androidMonthlyProductId = 'fitscriptai_premium_monthly';
-  String _androidYearlyProductId = 'fitscriptai.premium.yearly';
+  String _androidMonthlyProductId = 'monthly.fitscript.ai.premium';
+  String _androidYearlyProductId = 'yearly.fitscript.ai.premium';
   final InAppPurchaseService _purchaseService = InAppPurchaseService();
   Map<String, ProductDetails> _products = const {};
   bool _isPurchasing = false;
@@ -121,6 +121,36 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
     return fallback;
   }
 
+  bool _looksLikeIosSku(String sku) {
+    final value = sku.toLowerCase();
+    return value.startsWith('com.');
+  }
+
+  bool _looksLikeAndroidSku(String sku) {
+    final value = sku.toLowerCase();
+    return value.startsWith('fitscriptai') ||
+        value.endsWith('.fitscript.ai.premium') ||
+        value.contains('fitscript.ai.premium');
+  }
+
+  bool _isSkuCompatibleWithCurrentPlatform(String sku) {
+    final normalized = sku.trim();
+    final androidSkus = <String>{
+      _androidMonthlyProductId,
+      _androidYearlyProductId,
+    };
+    final iosSkus = <String>{_iosMonthlyProductId, _iosYearlyProductId};
+
+    if (_isAndroidPlatform) {
+      return androidSkus.contains(normalized) ||
+          _looksLikeAndroidSku(normalized);
+    }
+    if (_isIosPlatform) {
+      return iosSkus.contains(normalized) || _looksLikeIosSku(normalized);
+    }
+    return true;
+  }
+
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       if (!_isManagedSku(purchase.productID)) {
@@ -172,7 +202,16 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
 
   Future<void> _markPremiumEntitlement(PurchaseDetails purchase) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) {
+        _showPremiumSnackbar(
+          context,
+          'User not logged in. Cannot activate premium.',
+        );
+      }
+      debugPrint('[Premium] User not logged in saat _markPremiumEntitlement');
+      return;
+    }
 
     final yearlySkus = <String>{
       _iosYearlyProductId,
@@ -180,23 +219,37 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
       _activeYearlyProductId,
     };
     final isYearly = yearlySkus.contains(purchase.productID);
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('meta')
-        .doc('subscription')
-        .set({
-          'isPremium': true,
-          'plan': isYearly ? 'yearly' : 'monthly',
-          'productId': purchase.productID,
-          'purchaseId': purchase.purchaseID,
-          'verificationData': purchase.verificationData.serverVerificationData,
-          'source': purchase.verificationData.source,
-          'verificationState': 'client_unverified',
-          'requiresServerVerification': true,
-          'status': purchase.status.name,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('meta')
+          .doc('subscription')
+          .set({
+            'isPremium': true,
+            'plan': isYearly ? 'yearly' : 'monthly',
+            'productId': purchase.productID,
+            'purchaseId': purchase.purchaseID,
+            'verificationData':
+                purchase.verificationData.serverVerificationData,
+            'source': purchase.verificationData.source,
+            'verificationState': 'client_unverified',
+            'requiresServerVerification': true,
+            'status': purchase.status.name,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+      debugPrint(
+        '[Premium] Firestore subscription updated for user: ${user.uid}',
+      );
+    } catch (e) {
+      debugPrint('[Premium] Gagal update Firestore subscription: $e');
+      if (mounted) {
+        _showPremiumSnackbar(
+          context,
+          'Gagal mengaktifkan premium. Coba lagi atau hubungi support.',
+        );
+      }
+    }
   }
 
   Future<void> _onRestorePressed(BuildContext context) async {
@@ -233,30 +286,24 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
         ),
       );
       await remoteConfig.setDefaults({
-        'android_monthly_fitscript_pro': 'fitscriptai-premium-monthly',
-        'android_yearly_fitscript_pro': 'fitscriptai-premium-yearly',
+        'android_monthly_fitscript_pro': 'monthly.fitscript.ai.premium',
+        'android_yearly_fitscript_pro': 'yearly.fitscript.ai.premium',
         'ios_monthly_fitscript_pro':
             'com.aimultiapps.fitscriptAi.premium.monthly',
         'ios_yearly_fitscript_pro':
             'com.aimultiapps.fitscriptAi.premium.yearly',
-        'monthly_fitscript_pro': _iosMonthlyProductId,
-        'yearly_fitscript_pro': _iosYearlyProductId,
       });
       await remoteConfig.fetchAndActivate();
 
       final androidMonthlyCandidates = _normalizedCandidates(<String>[
         remoteConfig.getString('android_monthly_fitscript_pro'),
         _androidMonthlyProductId,
-        'fitscriptai-premium-monthly',
-        'fitscriptai_premium_monthly',
-        'fitscriptai.premium.monthly',
+        'monthly.fitscript.ai.premium',
       ]);
       final androidYearlyCandidates = _normalizedCandidates(<String>[
         remoteConfig.getString('android_yearly_fitscript_pro'),
         _androidYearlyProductId,
-        'fitscriptai-premium-yearly',
-        'fitscriptai_premium_yearly',
-        'fitscriptai.premium.yearly',
+        'yearly.fitscript.ai.premium',
       ]);
 
       final iosMonthlyCandidates = _normalizedCandidates(<String>[
@@ -361,9 +408,37 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
 
     final selectedSku = _selectedProductId.trim();
 
+    if (_isAndroidPlatform && !kReleaseMode) {
+      _showPremiumSnackbar(
+        context,
+        'Android purchase test requires a Play-distributed release build (Internal testing). Current build is not release.',
+      );
+      return;
+    }
+
+    if (!_isSkuCompatibleWithCurrentPlatform(selectedSku)) {
+      _showPremiumSnackbar(
+        context,
+        'SKU platform mismatch. Selected SKU: $selectedSku',
+      );
+      return;
+    }
+
     if (!_isStoreAvailable) {
       _showPremiumSnackbar(context, 'Store is unavailable right now.');
       return;
+    }
+
+    final refreshedProducts = await _purchaseService.loadProducts({
+      selectedSku,
+      _activeMonthlyProductId.trim(),
+      _activeYearlyProductId.trim(),
+    });
+    if (!context.mounted) return;
+    if (mounted && refreshedProducts.isNotEmpty) {
+      setState(() {
+        _products = refreshedProducts;
+      });
     }
 
     final product = _resolveSelectedProduct();
@@ -376,6 +451,13 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
     }
 
     final purchaseSku = product.id;
+    if (!_isSkuCompatibleWithCurrentPlatform(purchaseSku)) {
+      _showPremiumSnackbar(
+        context,
+        'Resolved SKU is not valid for this platform: $purchaseSku',
+      );
+      return;
+    }
 
     setState(() => _isPurchasing = true);
     final result = await _purchaseService.buyProduct(product);
@@ -388,7 +470,12 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
       PurchaseStartResult.unavailable =>
         'Store is unavailable right now.\nSKU: $purchaseSku',
       PurchaseStartResult.failed =>
-        'Unable to start purchase flow.\nSKU: $purchaseSku',
+        'Unable to start purchase flow.\n'
+            'Selected: $selectedSku\n'
+            'Resolved: $purchaseSku\n'
+            'Monthly: ${_activeMonthlyProductId.trim()}\n'
+            'Yearly: ${_activeYearlyProductId.trim()}\n'
+            '${_purchaseService.lastPurchaseErrorMessage ?? ''}',
     };
     _showPremiumSnackbar(context, message);
   }
@@ -453,15 +540,19 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
                     runSpacing: 8,
                     children: [
                       _PriceChip(
-                        label: highlightedMonthly,
-                        color: theme.colorScheme.onPrimaryContainer,
+                        label:
+                            _products[_activeMonthlyProductId]?.price ??
+                            r'$0,0/Month',
+                        color: theme.colorScheme.primaryContainer,
                         background: theme.colorScheme.surface.withValues(
                           alpha: 0.9,
                         ),
                       ),
                       _PriceChip(
-                        label: highlightedYearly,
-                        color: theme.colorScheme.onPrimaryContainer,
+                        label:
+                            _products[_activeYearlyProductId]?.price ??
+                            r'$0,0/Year',
+                        color: theme.colorScheme.primaryContainer,
                         background: theme.colorScheme.surface.withValues(
                           alpha: 0.9,
                         ),

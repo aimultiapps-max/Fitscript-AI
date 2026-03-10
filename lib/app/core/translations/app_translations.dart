@@ -28,6 +28,14 @@ class AppTranslations extends Translations {
       'legal_toc_title': 'Table of Contents',
       'legal_load_error': 'Document cannot be loaded at this time.',
       'legal_back_to_top_tooltip': 'Back to top',
+      'update_available_title': 'Update available for @name',
+      'update_available_message':
+          'A newer version is ready. Current: @current, Latest: @latest.',
+      'update_now_button': 'Update now',
+      'update_later_button': 'Later',
+      'update_failed_title': 'Update failed',
+      'update_failed_message':
+          'Unable to open the App Store right now. Please try again.',
       'consent_saved_title': 'Consent saved',
       'consent_saved_privacy': 'Privacy Policy has been accepted.',
       'consent_saved_terms': 'Terms and Conditions have been accepted.',
@@ -228,6 +236,21 @@ class AppTranslations extends Translations {
       'profile_trial_left': '@count left',
       'profile_trial_lab_result_analysis': 'Lab Result Analysis',
       'profile_trial_save_analysis_result': 'Save Analysis Result',
+      'profile_info_center_title': 'Information & Support',
+      'profile_info_center_subtitle':
+          'Learn about the app mission, support policies, and marketing resources.',
+      'profile_about_app': 'About App',
+      'profile_about_app_desc':
+          'Vision, safeguards, and why FitScript AI exists.',
+      'profile_support_information': 'Support Information',
+      'profile_support_information_desc':
+          'Official contact channel and compliance response times.',
+      'profile_marketing_information': 'Marketing Information',
+      'profile_marketing_information_desc':
+          'Media kit, messaging guide, and disclaimer template.',
+      'profile_support_unavailable_title': 'Cannot open mail app',
+      'profile_support_unavailable_message':
+          'Please email support@fitscript.ai manually if the shortcut fails.',
       'profile_privacy_policy': 'Privacy Policy',
       'profile_terms_conditions': 'Terms and Conditions',
       'profile_danger_zone': 'Danger Zone',
@@ -343,6 +366,47 @@ class AppTranslations extends Translations {
           'Sign in with Apple is not available on this device. Please ensure Apple ID is signed in and iCloud is active.',
       'profile_auth_error_generic':
           'Authentication error occurred. Please try again.',
+      'info_section_highlights': 'Key highlights',
+      'info_section_additional': 'Additional details',
+      'info_about_title': 'About FitScript AI',
+      'info_about_subtitle':
+          'AI-powered health companion built for clarity and privacy.',
+      'info_about_point_1_title': 'Instant lab scan',
+      'info_about_point_1_desc':
+          'Real-time lab result scanning with contextual explanations.',
+      'info_about_point_2_title': 'Trend intelligence',
+      'info_about_point_2_desc':
+          'Dashboards that reveal long-term signals across saved results.',
+      'info_about_point_3_title': 'Privacy-first cloud',
+      'info_about_point_3_desc':
+          'Secure-by-design architecture with anonymous onboarding options.',
+      'info_support_title': 'Support & Compliance',
+      'info_support_subtitle': 'We respond quickly through verified channels.',
+      'info_support_point_1_title': 'Email support',
+      'info_support_point_1_desc': 'support@fitscript.ai',
+      'info_support_point_2_title': 'Response window',
+      'info_support_point_2_desc': 'Under 24 hours on business days.',
+      'info_support_point_3_title': 'Data requests',
+      'info_support_point_3_desc':
+          'Deletion and portability handled within 7 business days.',
+      'info_support_cta': 'Contact support',
+      'info_support_email_subject': 'FitScript AI support request',
+      'info_marketing_title': 'Marketing & Media Kit',
+      'info_marketing_subtitle':
+          'Everything you need to feature FitScript AI accurately.',
+      'info_marketing_point_1_title': 'Messaging toolkit',
+      'info_marketing_point_1_desc':
+          'One-liner, pitch paragraph, and App Store keyword guidance.',
+      'info_marketing_point_2_title': 'Visual assets',
+      'info_marketing_point_2_desc':
+          'Icon pack, hero renders, and screenshot frames.',
+      'info_marketing_point_3_title': 'Medical disclaimer template',
+      'info_marketing_point_3_desc':
+          'Ready-to-use disclaimer copy for compliant promotions.',
+      'info_marketing_note':
+          'Media kit links are sent after verifying each request to keep assets current.',
+      'info_marketing_cta': 'Request media kit',
+      'info_marketing_email_subject': 'FitScript AI media kit request',
       'auth_title': 'Sign in to continue',
       'auth_subtitle':
           'Use Google or Apple account to access your FitScript AI data securely.',
@@ -381,6 +445,14 @@ class AppTranslations extends Translations {
       'legal_toc_title': 'Daftar Isi',
       'legal_load_error': 'Dokumen tidak dapat dimuat saat ini.',
       'legal_back_to_top_tooltip': 'Kembali ke atas',
+      'update_available_title': 'Pembaruan tersedia untuk @name',
+      'update_available_message':
+          'Versi terbaru sudah tersedia. Saat ini: @current, Terbaru: @latest.',
+      'update_now_button': 'Perbarui sekarang',
+      'update_later_button': 'Nanti',
+      'update_failed_title': 'Gagal memperbarui',
+      'update_failed_message':
+          'Tidak dapat membuka App Store sekarang. Silakan coba lagi.',
       'consent_saved_title': 'Persetujuan tersimpan',
       'consent_saved_privacy': 'Privacy Policy berhasil disetujui.',
       'consent_saved_terms': 'Terms and Conditions berhasil disetujui.',
@@ -579,6 +651,21 @@ class AppTranslations extends Translations {
       'profile_trial_left': '@count tersisa',
       'profile_trial_lab_result_analysis': 'Analisis Hasil Lab',
       'profile_trial_save_analysis_result': 'Simpan Hasil Analisis',
+      'profile_info_center_title': 'Informasi & Dukungan',
+      'profile_info_center_subtitle':
+          'Pelajari misi aplikasi, kebijakan dukungan, dan aset marketing.',
+      'profile_about_app': 'Tentang Aplikasi',
+      'profile_about_app_desc':
+          'Visi, keamanan, dan alasan FitScript AI dibuat.',
+      'profile_support_information': 'Informasi Dukungan',
+      'profile_support_information_desc':
+          'Kanal kontak resmi serta waktu respons kepatuhan.',
+      'profile_marketing_information': 'Informasi Marketing',
+      'profile_marketing_information_desc':
+          'Media kit, panduan pesan, dan template disclaimer.',
+      'profile_support_unavailable_title': 'Tidak dapat membuka aplikasi email',
+      'profile_support_unavailable_message':
+          'Silakan email support@fitscript.ai secara manual jika tombol gagal.',
       'profile_privacy_policy': 'Kebijakan Privasi',
       'profile_terms_conditions': 'Syarat dan Ketentuan',
       'profile_danger_zone': 'Zona Berbahaya',
@@ -693,6 +780,47 @@ class AppTranslations extends Translations {
           'Sign in with Apple tidak tersedia di perangkat ini. Pastikan Apple ID sudah login dan iCloud aktif.',
       'profile_auth_error_generic':
           'Terjadi kendala autentikasi. Silakan coba lagi.',
+      'info_section_highlights': 'Sorotan utama',
+      'info_section_additional': 'Detail tambahan',
+      'info_about_title': 'Tentang FitScript AI',
+      'info_about_subtitle':
+          'Pendamping kesehatan berbasis AI yang menonjolkan kejelasan dan privasi.',
+      'info_about_point_1_title': 'Pemindaian lab instan',
+      'info_about_point_1_desc':
+          'Pemindaian hasil lab real-time dengan penjelasan kontekstual.',
+      'info_about_point_2_title': 'Kecerdasan tren',
+      'info_about_point_2_desc':
+          'Dasbor tren untuk membaca sinyal jangka panjang dari riwayat tersimpan.',
+      'info_about_point_3_title': 'Cloud berorientasi privasi',
+      'info_about_point_3_desc':
+          'Arsitektur aman dengan opsi mulai anonim tanpa akun.',
+      'info_support_title': 'Dukungan & Kepatuhan',
+      'info_support_subtitle': 'Respons cepat melalui kanal terverifikasi.',
+      'info_support_point_1_title': 'Email dukungan',
+      'info_support_point_1_desc': 'support@fitscript.ai',
+      'info_support_point_2_title': 'Waktu respons',
+      'info_support_point_2_desc': 'Maksimal 24 jam di hari kerja.',
+      'info_support_point_3_title': 'Permintaan data',
+      'info_support_point_3_desc':
+          'Penghapusan/portabilitas ditangani maksimal 7 hari kerja.',
+      'info_support_cta': 'Hubungi dukungan',
+      'info_support_email_subject': 'Permintaan dukungan FitScript AI',
+      'info_marketing_title': 'Marketing & Media Kit',
+      'info_marketing_subtitle':
+          'Semua kebutuhan untuk menampilkan FitScript AI secara akurat.',
+      'info_marketing_point_1_title': 'Toolkit pesan',
+      'info_marketing_point_1_desc':
+          'Kalimat singkat, paragraf pitch, dan panduan kata kunci store.',
+      'info_marketing_point_2_title': 'Aset visual',
+      'info_marketing_point_2_desc':
+          'Paket ikon, render hero, dan bingkai screenshot.',
+      'info_marketing_point_3_title': 'Template disclaimer medis',
+      'info_marketing_point_3_desc':
+          'Teks siap pakai untuk materi promosi yang patuh.',
+      'info_marketing_note':
+          'Tautan media kit dikirim setelah verifikasi agar aset selalu terbaru.',
+      'info_marketing_cta': 'Minta media kit',
+      'info_marketing_email_subject': 'Permintaan media kit FitScript AI',
       'auth_title': 'Masuk untuk melanjutkan',
       'auth_subtitle':
           'Gunakan akun Google atau Apple untuk mengakses data FitScript AI Anda dengan aman.',

@@ -14,12 +14,14 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/account_auth_service.dart';
 import '../../../core/services/lab_analysis_service.dart';
 import '../../../routes/app_pages.dart';
 import '../views/legal_document_view.dart';
 import '../views/premium_upgrade_view.dart';
+import '../views/info_detail_view.dart';
 
 enum LabHistoryStatus { normal, warning, improve }
 
@@ -162,6 +164,7 @@ class HomeController extends GetxController {
   static const String _trialUsageSaveDeviceKey = 'trial_usage_save_device';
   static const String _localGuestModeKey = 'local_guest_mode';
   static const String _localGuestHistoryKey = 'local_guest_analysis_history_v1';
+  static const String _supportEmail = 'support@fitscript.ai';
   bool _isMigratingLocalGuestHistory = false;
 
   late final StreamSubscription<User?> _authSubscription;
@@ -1396,59 +1399,254 @@ class HomeController extends GetxController {
       doc.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          theme: pw.ThemeData.withFont(
+            base: pw.Font.helvetica(),
+            bold: pw.Font.helveticaBold(),
+          ),
           build: (context) => [
-            pw.Text(
-              'FitScript AI',
-              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 6),
-            pw.Text(
-              'home_analysis_result_title'.tr,
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 14),
-            pw.Text(history.title, style: const pw.TextStyle(fontSize: 16)),
-            pw.SizedBox(height: 6),
-            pw.Text('${'history_date_label'.tr}: ${history.date}'),
-            pw.Text('${'history_status_label'.tr}: $statusLabel'),
-            pw.SizedBox(height: 12),
-            pw.Text(
-              'home_analysis_findings_label'.tr,
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              history.signals.isEmpty
-                  ? '-'
-                  : history.signals
-                        .map((signal) => signal.trim())
-                        .where((signal) => signal.isNotEmpty)
-                        .join(', '),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Text(
-              'home_analysis_recommendation_label'.tr,
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              history.recommendation.isEmpty ? '-' : history.recommendation,
-            ),
-            pw.SizedBox(height: 12),
-            pw.Text(
-              'home_analysis_next_steps_label'.tr,
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            if (history.nextSteps.isEmpty)
-              pw.Text('-')
-            else
-              ...history.nextSteps.map(
-                (step) => pw.Padding(
-                  padding: const pw.EdgeInsets.only(bottom: 2),
-                  child: pw.Text('• $step'),
+            // Header
+            pw.Container(
+              padding: const pw.EdgeInsets.only(bottom: 16),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(width: 1, color: PdfColors.grey300),
                 ),
               ),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Row(
+                    children: [
+                      pw.Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const pw.BoxDecoration(
+                          color: PdfColors.blue,
+                          shape: pw.BoxShape.circle,
+                        ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'FS',
+                            style: pw.TextStyle(
+                              color: PdfColors.white,
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.SizedBox(width: 12),
+                      pw.Text(
+                        'FitScript AI',
+                        style: pw.TextStyle(
+                          fontSize: 22,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.blue800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Text(
+                    '${'history_date_label'.tr}: ${history.date}',
+                    style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 18),
+            // Title & Status
+            pw.Text(
+              history.title,
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 4,
+              ),
+              decoration: pw.BoxDecoration(
+                color: statusLabel.toLowerCase().contains('normal')
+                    ? PdfColors.green100
+                    : statusLabel.toLowerCase().contains('warning')
+                    ? PdfColors.orange100
+                    : PdfColors.blue100,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Text(
+                '${'history_status_label'.tr}: $statusLabel',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 12,
+                  color: PdfColors.blueGrey800,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 18),
+            // Findings Section
+            pw.Container(
+              padding: const pw.EdgeInsets.all(14),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'home_analysis_findings_label'.tr,
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 14,
+                      color: PdfColors.blueGrey900,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  history.signals.isEmpty
+                      ? pw.Text(
+                          '-',
+                          style: pw.TextStyle(color: PdfColors.grey600),
+                        )
+                      : pw.Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: history.signals
+                              .map(
+                                (signal) => pw.Container(
+                                  padding: const pw.EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  margin: const pw.EdgeInsets.only(bottom: 2),
+                                  decoration: pw.BoxDecoration(
+                                    color: PdfColors.blue50,
+                                    borderRadius: pw.BorderRadius.circular(6),
+                                  ),
+                                  child: pw.Text(
+                                    signal.trim(),
+                                    style: pw.TextStyle(
+                                      fontSize: 11,
+                                      color: PdfColors.blueGrey800,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            // Recommendation Section
+            pw.Container(
+              padding: const pw.EdgeInsets.all(14),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.blue50,
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'home_analysis_recommendation_label'.tr,
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 14,
+                      color: PdfColors.blueGrey900,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  pw.Text(
+                    history.recommendation.isEmpty
+                        ? '-'
+                        : history.recommendation,
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.blueGrey800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            // Next Steps Section
+            pw.Container(
+              padding: const pw.EdgeInsets.all(14),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.green50,
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'home_analysis_next_steps_label'.tr,
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 14,
+                      color: PdfColors.blueGrey900,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  if (history.nextSteps.isEmpty)
+                    pw.Text('-', style: pw.TextStyle(color: PdfColors.grey600))
+                  else
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: history.nextSteps
+                          .map(
+                            (step) => pw.Padding(
+                              padding: const pw.EdgeInsets.only(bottom: 2),
+                              child: pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text(
+                                    '• ',
+                                    style: pw.TextStyle(
+                                      fontSize: 12,
+                                      color: PdfColors.blueGrey800,
+                                    ),
+                                  ),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      step,
+                                      style: pw.TextStyle(
+                                        fontSize: 12,
+                                        color: PdfColors.blueGrey800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 24),
+            // Footer
+            pw.Divider(color: PdfColors.grey300),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'Generated by FitScript AI',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                ),
+                pw.Text(
+                  '© ${DateTime.now().year} FitScript',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                ),
+              ],
+            ),
           ],
         ),
       );
@@ -1512,6 +1710,18 @@ class HomeController extends GetxController {
     );
   }
 
+  void openAboutAppInfo() {
+    Get.to<void>(() => const InfoDetailView(type: InfoDetailType.about));
+  }
+
+  void openSupportInformation() {
+    Get.to<void>(() => const InfoDetailView(type: InfoDetailType.support));
+  }
+
+  void openMarketingInformation() {
+    Get.to<void>(() => const InfoDetailView(type: InfoDetailType.marketing));
+  }
+
   void openTermsAndConditions() async {
     final hasAccepted = await _hasAcceptedConsent('terms_and_conditions');
     final isIndonesian = selectedLanguageCode.value == 'id';
@@ -1534,6 +1744,30 @@ class HomeController extends GetxController {
         );
       }
     });
+  }
+
+  Future<void> contactSupport({String? subject}) async {
+    final normalizedSubject = subject?.trim();
+    final queryParameters = <String, String>{};
+    if (normalizedSubject != null && normalizedSubject.isNotEmpty) {
+      queryParameters['subject'] = normalizedSubject;
+    }
+
+    final uri = Uri(
+      scheme: 'mailto',
+      path: _supportEmail,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    );
+
+    final launched = await launchUrl(uri);
+    if (!launched) {
+      Get.snackbar(
+        'profile_support_unavailable_title'.tr,
+        'profile_support_unavailable_message'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   Future<bool> _hasAcceptedConsent(String docId) async {
