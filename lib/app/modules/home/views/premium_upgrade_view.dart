@@ -480,23 +480,9 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
     _showPremiumSnackbar(context, message);
   }
 
-  bool get _isIndonesiaLocale {
-    final locale = Get.locale;
-    if (locale == null) return false;
-    return locale.languageCode.toLowerCase() == 'id' ||
-        locale.countryCode?.toUpperCase() == 'ID';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isIndonesia = _isIndonesiaLocale;
-    final highlightedMonthly = isIndonesia
-        ? 'premium_price_id_monthly'.tr
-        : 'premium_price_global_monthly'.tr;
-    final highlightedYearly = isIndonesia
-        ? 'premium_price_id_yearly'.tr
-        : 'premium_price_global_yearly'.tr;
 
     return Scaffold(
       appBar: AppBar(title: Text('premium_title'.tr)),
