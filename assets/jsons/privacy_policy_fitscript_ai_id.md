@@ -47,6 +47,7 @@ Tergantung cara Anda menggunakan aplikasi, kami dapat memproses:
 Kami menggunakan data untuk:
 
 - Menganalisis hasil lab dan menampilkan penjelasan yang lebih mudah dipahami
+- Mengirimkan file laporan lab yang Anda unggah (gambar atau PDF) ke layanan AI pihak ketiga (Google Cloud Vertex AI / Gemini) untuk menghasilkan analisis dan wawasan
 - Memberikan saran gaya hidup personal (aktivitas dan nutrisi)
 - Menyimpan riwayat agar Anda dapat memantau tren dari waktu ke waktu
 - Menyinkronkan data antar perangkat saat Anda menautkan akun
@@ -102,6 +103,8 @@ Saat data tidak lagi diperlukan, kami akan menghapus atau menganonimkan data jik
 Kami **tidak** menjual data pribadi.
 
 Kami dapat membagikan data terbatas kepada penyedia layanan tepercaya (hosting, autentikasi, analitik, pelaporan crash) hanya untuk operasional aplikasi dan dengan perlindungan yang memadai.
+
+- Kami juga membagikan file laporan lab yang diunggah (gambar atau PDF) ke layanan AI pihak ketiga (Google Cloud Vertex AI / Gemini) untuk menghasilkan analisis dan wawasan yang ditampilkan di aplikasi.
 
 Kami juga dapat mengungkap data jika diwajibkan oleh hukum atau permintaan legal yang sah.
 

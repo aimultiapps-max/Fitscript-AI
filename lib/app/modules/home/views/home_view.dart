@@ -4,7 +4,9 @@ import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/services/lab_analysis_service.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -650,6 +652,19 @@ class _HistoryPage extends StatelessWidget {
                           color: theme.colorScheme.onSecondaryContainer,
                         ),
                       ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'home_analysis_recommendation_sources_label'.tr,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: _buildSourceLinks(context, history.sources),
+                      ),
                     ],
                   ),
                 ),
@@ -1199,6 +1214,17 @@ class _ProfilePage extends StatelessWidget {
                           : 'profile_subscription_description'.tr,
                       style: theme.textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: 16),
+                    if (!isPremium) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: controller.upgradeToPremium,
+                          child: Text('profile_upgrade_button'.tr),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                   ],
                 ),
               ),
@@ -1377,8 +1403,8 @@ class _ProfilePage extends StatelessWidget {
                     const Divider(height: 1),
                     _ProfileActionTile(
                       icon: Icons.article_outlined,
-                      title: 'profile_terms_conditions'.tr,
-                      onTap: controller.openTermsAndConditions,
+                      title: 'Terms of Use (EULA)',
+                      onTap: controller.openEULA,
                     ),
                     const Divider(height: 1),
                     _ProfileActionTile(
@@ -1432,46 +1458,22 @@ class _ProfilePage extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              _ProfileSectionCard(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: controller.upgradeToPremium,
-                        child: Text('profile_upgrade_button'.tr),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: controller.restorePurchases,
-                        child: Text('profile_restore_button'.tr),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: controller.signOut,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.colorScheme.onSurfaceVariant,
-                          side: BorderSide(
-                            color: theme.colorScheme.outlineVariant,
-                          ),
-                        ),
-                        icon: Icon(
-                          isAnonymous ? Icons.logout : Icons.logout_outlined,
-                        ),
-                        label: Text(
-                          isAnonymous
-                              ? 'profile_guest_exit_button'.tr
-                              : 'profile_sign_out_button'.tr,
-                        ),
-                      ),
-                    ),
-                  ],
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: controller.signOut,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.onSurfaceVariant,
+                    side: BorderSide(color: theme.colorScheme.outlineVariant),
+                  ),
+                  icon: Icon(
+                    isAnonymous ? Icons.logout : Icons.logout_outlined,
+                  ),
+                  label: Text(
+                    isAnonymous
+                        ? 'profile_guest_exit_button'.tr
+                        : 'profile_sign_out_button'.tr,
+                  ),
                 ),
               ),
             ],
@@ -2175,6 +2177,24 @@ class _HomeMainContentState extends State<_HomeMainContent>
                                                 .colorScheme
                                                 .onSecondaryContainer,
                                           ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'home_analysis_recommendation_sources_label'
+                                          .tr,
+                                      style: theme.textTheme.labelLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children: _buildSourceLinks(
+                                        context,
+                                        pending?.sources,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -2884,6 +2904,65 @@ class _MetaPill extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SourceLink extends StatelessWidget {
+  const _SourceLink({required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return TextButton(
+      onPressed: () async {
+        final uri = Uri.tryParse(url);
+        if (uri == null) return;
+
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          Get.snackbar(
+            'profile_open_link_failed_title'.tr,
+            'profile_open_link_failed_message'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 3),
+          );
+        }
+      },
+      style: TextButton.styleFrom(
+        foregroundColor: theme.colorScheme.onSecondaryContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.25,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Text(label),
+    );
+  }
+}
+
+List<Widget> _buildSourceLinks(
+  BuildContext context,
+  List<LabAnalysisSource>? sources,
+) {
+  const defaultSources = [
+    LabAnalysisSource(label: 'WHO', url: 'https://www.who.int/'),
+    LabAnalysisSource(label: 'CDC', url: 'https://www.cdc.gov/'),
+  ];
+
+  final effectiveSources = (sources != null && sources.isNotEmpty)
+      ? sources
+      : defaultSources;
+
+  return effectiveSources
+      .map((source) => _SourceLink(label: source.label, url: source.url))
+      .toList();
 }
 
 class _StatusChip extends StatelessWidget {

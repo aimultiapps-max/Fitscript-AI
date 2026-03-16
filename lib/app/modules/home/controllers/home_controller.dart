@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -87,6 +88,7 @@ class LabHistoryItem {
     required this.recommendation,
     required this.signals,
     required this.nextSteps,
+    required this.sources,
     required this.status,
   });
 
@@ -98,6 +100,7 @@ class LabHistoryItem {
   final String recommendation;
   final List<String> signals;
   final List<String> nextSteps;
+  final List<LabAnalysisSource> sources;
   final LabHistoryStatus status;
 
   String get note => summary;
@@ -110,6 +113,7 @@ class PendingLabAnalysis {
     required this.recommendation,
     required this.signals,
     required this.nextSteps,
+    required this.sources,
     required this.status,
   });
 
@@ -118,6 +122,7 @@ class PendingLabAnalysis {
   final String recommendation;
   final List<String> signals;
   final List<String> nextSteps;
+  final List<LabAnalysisSource> sources;
   final LabHistoryStatus status;
 }
 
@@ -164,6 +169,7 @@ class HomeController extends GetxController {
   static const String _trialUsageSaveDeviceKey = 'trial_usage_save_device';
   static const String _localGuestModeKey = 'local_guest_mode';
   static const String _localGuestHistoryKey = 'local_guest_analysis_history_v1';
+  static const String _aiAnalysisConsentKey = 'ai_analysis_consent';
   static const String _supportEmail = 'support@fitscript.ai';
   bool _isMigratingLocalGuestHistory = false;
 
@@ -621,6 +627,9 @@ class HomeController extends GetxController {
       'recommendation': analysis.recommendation,
       'signals': analysis.signals,
       'nextSteps': analysis.nextSteps,
+      'sources': analysis.sources
+          .map((source) => {'label': source.label, 'url': source.url})
+          .toList(),
       'status': switch (analysis.status) {
         LabHistoryStatus.warning => 'warning',
         LabHistoryStatus.improve => 'improve',
@@ -693,6 +702,7 @@ class HomeController extends GetxController {
         .trim();
     final signals = _parseStringList(data['signals']);
     final nextSteps = _parseStringList(data['nextSteps'] ?? data['next_steps']);
+    final sources = _parseSources(data['sources']);
 
     final statusRaw =
         (data['status'] ?? data['riskLevel'] ?? data['severity'] ?? '')
@@ -723,6 +733,7 @@ class HomeController extends GetxController {
       recommendation: recommendation,
       signals: signals,
       nextSteps: nextSteps,
+      sources: sources,
       status: status,
     );
   }
@@ -740,6 +751,22 @@ class HomeController extends GetxController {
       return <String>[value];
     }
     return const <String>[];
+  }
+
+  List<LabAnalysisSource> _parseSources(dynamic raw) {
+    if (raw is Iterable) {
+      return raw
+          .whereType<Map>()
+          .map(
+            (item) => LabAnalysisSource(
+              label: (item['label'] ?? item['name'] ?? '').toString().trim(),
+              url: (item['url'] ?? item['link'] ?? '').toString().trim(),
+            ),
+          )
+          .where((source) => source.label.isNotEmpty && source.url.isNotEmpty)
+          .toList();
+    }
+    return const <LabAnalysisSource>[];
   }
 
   DateTime _extractHistoryDate(Map<String, dynamic> data) {
@@ -909,6 +936,50 @@ class HomeController extends GetxController {
         ),
       ],
     );
+  }
+
+  Future<bool> _ensureAiAnalysisConsent() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasConsent = prefs.getBool(_aiAnalysisConsentKey) ?? false;
+    if (hasConsent) return true;
+
+    final theme = Get.theme;
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: theme.colorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        title: Text('ai_analysis_consent_title'.tr),
+        content: Text('ai_analysis_consent_message'.tr),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+            ),
+            child: Text('ai_analysis_consent_decline'.tr),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: Text('ai_analysis_consent_accept'.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+
+    if (confirmed != true) return false;
+
+    await prefs.setBool(_aiAnalysisConsentKey, true);
+    _showAppSnackbar(
+      'ai_analysis_consent_saved_title'.tr,
+      'ai_analysis_consent_saved_message'.tr,
+    );
+    return true;
   }
 
   Future<void> _loadFreeTrialLimits() async {
@@ -1210,6 +1281,9 @@ class HomeController extends GetxController {
       return;
     }
 
+    final consented = await _ensureAiAnalysisConsent();
+    if (!consented) return;
+
     isAnalyzingLabImage.value = true;
     try {
       final output = await _labAnalysisService.analyzeLabImage(
@@ -1230,6 +1304,7 @@ class HomeController extends GetxController {
         recommendation: output.recommendation,
         signals: output.signals,
         nextSteps: output.nextSteps,
+        sources: output.sources,
         status: status,
       );
       isCurrentAnalysisSaved.value = false;
@@ -1294,6 +1369,9 @@ class HomeController extends GetxController {
               'recommendation': analysis.recommendation,
               'signals': analysis.signals,
               'nextSteps': analysis.nextSteps,
+              'sources': analysis.sources
+                  .map((source) => {'label': source.label, 'url': source.url})
+                  .toList(),
               'status': switch (analysis.status) {
                 LabHistoryStatus.warning => 'warning',
                 LabHistoryStatus.improve => 'improve',
@@ -1722,28 +1800,23 @@ class HomeController extends GetxController {
     Get.to<void>(() => const InfoDetailView(type: InfoDetailType.marketing));
   }
 
-  void openTermsAndConditions() async {
-    final hasAccepted = await _hasAcceptedConsent('terms_and_conditions');
-    final isIndonesian = selectedLanguageCode.value == 'id';
+  void openEULA() async {
+    final url = (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+        ? 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
+        : 'https://fitscript-ai.web.app/terms';
 
-    Get.to<bool>(
-      () => LegalDocumentView(
-        title: 'legal_terms_title'.tr,
-        assetPath: isIndonesian
-            ? 'assets/jsons/terms_and_conditions_fitscript_ai_id.md'
-            : 'assets/jsons/terms_and_conditions_fitscript_ai.md',
-        showAgreementAction: !hasAccepted,
-        agreementButtonLabel: 'legal_agree_button'.tr,
-      ),
-    )?.then((accepted) async {
-      if (accepted == true) {
-        await _saveConsent(
-          docId: 'terms_and_conditions',
-          successTitle: 'consent_saved_title'.tr,
-          successMessage: 'consent_saved_terms'.tr,
-        );
-      }
-    });
+    final launched = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      _showAppSnackbar(
+        'profile_open_link_failed_title'.tr,
+        'profile_open_link_failed_message'.tr,
+        icon: Icons.error_outline,
+      );
+    }
   }
 
   Future<void> contactSupport({String? subject}) async {

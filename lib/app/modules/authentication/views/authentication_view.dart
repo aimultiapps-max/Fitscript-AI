@@ -236,12 +236,12 @@ class AuthenticationView extends GetView<AuthenticationController> {
                             ),
                             const TextSpan(text: ', '),
                             TextSpan(
-                              text: 'legal_terms_title'.tr,
+                              text: 'Terms of Use (EULA)',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                               ),
                               recognizer: TapGestureRecognizer()
-                                ..onTap = controller.openTermsAndConditions,
+                                ..onTap = controller.openEULA,
                             ),
                             const TextSpan(text: '.'),
                           ],

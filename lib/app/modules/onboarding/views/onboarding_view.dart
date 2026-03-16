@@ -59,6 +59,7 @@ class _OnboardingViewState extends State<OnboardingView> {
     final theme = Theme.of(context);
     final isFirstPage = _currentIndex == 0;
     final isLastPage = _currentIndex == _slides.length - 1;
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
 
     return Scaffold(
       body: Stack(
@@ -73,9 +74,12 @@ class _OnboardingViewState extends State<OnboardingView> {
                 imagePath: slide.imagePath,
                 title: slide.title.tr,
                 body: slide.bodyBuilder(context),
-                bottomContentPadding: index == 1 ? 116 : 92,
+                // Give the features screen extra bottom padding so the list
+                // never gets hidden behind the navigation buttons.
+                bottomContentPadding: 92,
                 activeIndex: _currentIndex,
                 slideCount: _slides.length,
+                isTablet: isTablet,
               );
             },
           ),
@@ -182,10 +186,73 @@ class _OnboardingViewState extends State<OnboardingView> {
             }),
           ),
           Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 18,
-            child: isFirstPage
+            left: isTablet ? null : 16,
+            right: isTablet ? null : 16,
+            bottom: MediaQuery.of(context).padding.bottom,
+            child: isTablet
+                ? Center(
+                    child: SizedBox(
+                      width: 600,
+                      child: isFirstPage
+                          ? SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: _onNextPressed,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: theme.colorScheme.onPrimary,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                child: Text('onboarding_next'.tr),
+                              ),
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _onPreviousPressed,
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor:
+                                          theme.colorScheme.surfaceContainer,
+                                      side: BorderSide(
+                                        color: theme.colorScheme.outlineVariant,
+                                      ),
+                                      foregroundColor:
+                                          theme.colorScheme.onSurface,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child: Text('onboarding_previous'.tr),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: FilledButton(
+                                    onPressed: _onNextPressed,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor:
+                                          theme.colorScheme.primary,
+                                      foregroundColor:
+                                          theme.colorScheme.onPrimary,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      isLastPage
+                                          ? 'onboarding_done'.tr
+                                          : 'onboarding_next'.tr,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  )
+                : isFirstPage
                 ? SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -247,7 +314,7 @@ class _OnboardingViewState extends State<OnboardingView> {
         return Text(
           'onboarding_welcome_body'.tr,
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodyLarge?.copyWith(
+          style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             height: 1.4,
           ),
@@ -257,7 +324,17 @@ class _OnboardingViewState extends State<OnboardingView> {
     _OnboardingSlideData(
       imagePath: 'assets/images/img-onboarding-2.png',
       title: 'onboarding_features_title',
-      bodyBuilder: (_) => const _OverlayFeatureChecklist(),
+      bodyBuilder: (context) {
+        final theme = Theme.of(context);
+        return Text(
+          'onboarding_features_body'.tr,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        );
+      },
     ),
     _OnboardingSlideData(
       imagePath: 'assets/images/img-onboarding-3.png',
@@ -269,7 +346,7 @@ class _OnboardingViewState extends State<OnboardingView> {
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
-            height: 1.45,
+            height: 1.4,
           ),
         );
       },
@@ -297,6 +374,7 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
     required this.bottomContentPadding,
     required this.activeIndex,
     required this.slideCount,
+    required this.isTablet,
   });
 
   final String imagePath;
@@ -305,6 +383,7 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
   final double bottomContentPadding;
   final int activeIndex;
   final int slideCount;
+  final bool isTablet;
 
   @override
   Widget build(BuildContext context) {
@@ -313,14 +392,14 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          flex: 2,
+          flex: isTablet ? 1 : 2,
           child: SizedBox.expand(
             child: Stack(
               fit: StackFit.expand,
               children: [
                 Image.asset(
                   imagePath,
-                  fit: BoxFit.cover,
+                  fit: isTablet ? BoxFit.contain : BoxFit.cover,
                   alignment: Alignment.center,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
@@ -372,145 +451,59 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 1,
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(18, 14, 18, bottomContentPadding),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.zero,
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.5,
+          flex: isTablet ? 3 : 1,
+          child: Center(
+            child: Container(
+              width: isTablet ? 600 : double.infinity,
+              padding: EdgeInsets.fromLTRB(18, 14, 18, bottomContentPadding),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: isTablet
+                    ? BorderRadius.circular(16)
+                    : BorderRadius.zero,
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.shadow.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(999),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(child: SingleChildScrollView(child: body)),
-              ],
+                  const SizedBox(height: 10),
+                  Expanded(child: SingleChildScrollView(child: body)),
+                ],
+              ),
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _OverlayFeatureChecklist extends StatelessWidget {
-  const _OverlayFeatureChecklist();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _OverlayFeatureItem(
-          icon: Icons.document_scanner_outlined,
-          text: 'onboarding_feature_1'.tr,
-          iconBackgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-        ),
-        _OverlayFeatureItem(
-          icon: Icons.quiz_outlined,
-          text: 'onboarding_feature_2'.tr,
-          iconBackgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-          iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
-        ),
-        _OverlayFeatureItem(
-          icon: Icons.show_chart_outlined,
-          text: 'onboarding_feature_3'.tr,
-          iconBackgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-          iconColor: Theme.of(context).colorScheme.onTertiaryContainer,
-        ),
-        _OverlayFeatureItem(
-          icon: Icons.spa_outlined,
-          text: 'onboarding_feature_4'.tr,
-          isLast: true,
-          iconBackgroundColor: Theme.of(
-            context,
-          ).colorScheme.primaryContainer.withValues(alpha: 0.78),
-          iconColor: Theme.of(context).colorScheme.primary,
-        ),
-      ],
-    );
-  }
-}
-
-class _OverlayFeatureItem extends StatelessWidget {
-  const _OverlayFeatureItem({
-    required this.icon,
-    required this.text,
-    required this.iconBackgroundColor,
-    required this.iconColor,
-    this.isLast = false,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color iconBackgroundColor;
-  final Color iconColor;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: iconBackgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Icon(icon, size: 18, color: iconColor),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

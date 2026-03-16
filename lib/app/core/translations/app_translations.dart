@@ -12,6 +12,8 @@ class AppTranslations extends Translations {
       'onboarding_welcome_body':
           'Scan your lab results and get fast analysis with easy-to-understand explanations.',
       'onboarding_features_title': 'Featured capabilities',
+      'onboarding_features_body':
+          'Scan your lab results and get instant analysis with easy-to-understand explanations, track trends over time, and receive personalized lifestyle guidance.',
       'onboarding_privacy_title': 'Privacy is a priority',
       'onboarding_privacy_body':
           'Your medical data is secure and encrypted. FitScript AI is an educational and informational tool, not a substitute for professional medical advice, diagnosis, or treatment.',
@@ -39,6 +41,13 @@ class AppTranslations extends Translations {
       'consent_saved_title': 'Consent saved',
       'consent_saved_privacy': 'Privacy Policy has been accepted.',
       'consent_saved_terms': 'Terms and Conditions have been accepted.',
+      'ai_analysis_consent_title': 'AI analysis permission',
+      'ai_analysis_consent_message':
+          'To generate insights, we send the lab report you upload (image/PDF) to Google’s AI service (Vertex AI / Gemini). Do you agree?',
+      'ai_analysis_consent_accept': 'Yes, analyze',
+      'ai_analysis_consent_decline': 'No, cancel',
+      'ai_analysis_consent_saved_title': 'Saved',
+      'ai_analysis_consent_saved_message': 'Your preference has been saved.',
       'consent_failed_title': 'Failed to save consent',
       'consent_failed_no_session':
           'Account session is not available. Please try again.',
@@ -133,6 +142,7 @@ class AppTranslations extends Translations {
       'home_analysis_result_title': 'AI Analysis Result',
       'home_analysis_findings_label': 'Key findings',
       'home_analysis_recommendation_label': 'Recommendation',
+      'home_analysis_recommendation_sources_label': 'Sources',
       'home_analysis_next_steps_label': 'Next steps',
       'home_save_analysis_button': 'Save Analysis Result',
       'home_saving_analysis_button': 'Saving...',
@@ -251,6 +261,9 @@ class AppTranslations extends Translations {
       'profile_support_unavailable_title': 'Cannot open mail app',
       'profile_support_unavailable_message':
           'Please email support@fitscript.ai manually if the shortcut fails.',
+      'profile_open_link_failed_title': 'Unable to open link',
+      'profile_open_link_failed_message':
+          'Please try again or open the link manually.',
       'profile_privacy_policy': 'Privacy Policy',
       'profile_terms_conditions': 'Terms and Conditions',
       'profile_danger_zone': 'Danger Zone',
@@ -431,6 +444,8 @@ class AppTranslations extends Translations {
       'onboarding_welcome_body':
           'Scan hasil lab Anda dan dapatkan analisis cepat dengan penjelasan yang mudah dipahami.',
       'onboarding_features_title': 'Fitur Unggulan',
+      'onboarding_features_body':
+          'Scan hasil lab Anda dan dapatkan analisis instan dengan penjelasan sederhana, pantau tren kesehatan dari waktu ke waktu, dan dapatkan panduan gaya hidup yang sesuai.',
       'onboarding_privacy_title': 'Privasi Tetap Prioritas',
       'onboarding_privacy_body':
           'Data medis Anda aman dan terenkripsi. FitScript AI adalah alat edukasi dan informasi, bukan pengganti saran, diagnosis, atau perawatan medis profesional.',
@@ -456,6 +471,13 @@ class AppTranslations extends Translations {
       'consent_saved_title': 'Persetujuan tersimpan',
       'consent_saved_privacy': 'Privacy Policy berhasil disetujui.',
       'consent_saved_terms': 'Terms and Conditions berhasil disetujui.',
+      'ai_analysis_consent_title': 'Izin Analisis AI',
+      'ai_analysis_consent_message':
+          'Untuk menghasilkan wawasan, kami mengirim dokumen lab yang Anda unggah (gambar/PDF) ke layanan AI Google (Vertex AI / Gemini). Apakah Anda setuju?',
+      'ai_analysis_consent_accept': 'Ya, lanjutkan',
+      'ai_analysis_consent_decline': 'Tidak, batalkan',
+      'ai_analysis_consent_saved_title': 'Tersimpan',
+      'ai_analysis_consent_saved_message': 'Preferensi Anda telah disimpan.',
       'consent_failed_title': 'Gagal menyimpan persetujuan',
       'consent_failed_no_session': 'Sesi akun tidak tersedia. Coba lagi.',
       'consent_failed_server': 'Terjadi kendala saat menyimpan ke server.',
@@ -549,6 +571,7 @@ class AppTranslations extends Translations {
       'home_analysis_result_title': 'Hasil Analisis AI',
       'home_analysis_findings_label': 'Temuan utama',
       'home_analysis_recommendation_label': 'Rekomendasi',
+      'home_analysis_recommendation_sources_label': 'Sumber',
       'home_analysis_next_steps_label': 'Langkah selanjutnya',
       'home_save_analysis_button': 'Simpan Hasil Analisis',
       'home_saving_analysis_button': 'Menyimpan...',
@@ -666,6 +689,9 @@ class AppTranslations extends Translations {
       'profile_support_unavailable_title': 'Tidak dapat membuka aplikasi email',
       'profile_support_unavailable_message':
           'Silakan email support@fitscript.ai secara manual jika tombol gagal.',
+      'profile_open_link_failed_title': 'Tidak dapat membuka tautan',
+      'profile_open_link_failed_message':
+          'Silakan coba lagi atau buka tautan secara manual.',
       'profile_privacy_policy': 'Kebijakan Privasi',
       'profile_terms_conditions': 'Syarat dan Ketentuan',
       'profile_danger_zone': 'Zona Berbahaya',

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 
 import '../../../core/services/in_app_purchase_service.dart';
@@ -44,9 +46,14 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
       ? _activeMonthlyProductId
       : _activeYearlyProductId;
 
+  late final TapGestureRecognizer _eulaRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
   @override
   void initState() {
     super.initState();
+    _eulaRecognizer = TapGestureRecognizer()..onTap = _openEula;
+    _privacyRecognizer = TapGestureRecognizer()..onTap = _openPrivacy;
     _purchaseSubscription = _purchaseService.purchaseUpdates.listen(
       _onPurchaseUpdates,
       onError: (_) {
@@ -67,6 +74,8 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
 
   @override
   void dispose() {
+    _eulaRecognizer.dispose();
+    _privacyRecognizer.dispose();
     _purchaseSubscription?.cancel();
     super.dispose();
   }
@@ -480,6 +489,24 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
     _showPremiumSnackbar(context, message);
   }
 
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      _showPremiumSnackbar(context, 'Unable to open link.');
+    }
+  }
+
+  Future<void> _openEula() async {
+    await _openExternalUrl(
+      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+    );
+  }
+
+  Future<void> _openPrivacy() async {
+    await _openExternalUrl('https://fitscript-ai.web.app/privacy');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -628,7 +655,42 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16, top: 16),
+            child: Text.rich(
+              TextSpan(
+                text: 'By subscribing, you agree to our ',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Terms of Use (EULA)',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: _eulaRecognizer,
+                  ),
+                  TextSpan(
+                    text: ' and ',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'Privacy Policy.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: _privacyRecognizer,
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.left,
+            ),
+          ),
           SizedBox(
             width: double.infinity,
             child: FilledButton(

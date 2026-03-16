@@ -8,6 +8,13 @@ enum AiBackend { googleAI, vertexAI }
 
 enum LabAnalysisSeverity { normal, warning, improve }
 
+class LabAnalysisSource {
+  const LabAnalysisSource({required this.label, required this.url});
+
+  final String label;
+  final String url;
+}
+
 class LabAnalysisOutput {
   const LabAnalysisOutput({
     required this.title,
@@ -16,6 +23,7 @@ class LabAnalysisOutput {
     required this.nextSteps,
     required this.severity,
     required this.signals,
+    required this.sources,
   });
 
   final String title;
@@ -24,6 +32,7 @@ class LabAnalysisOutput {
   final List<String> nextSteps;
   final LabAnalysisSeverity severity;
   final List<String> signals;
+  final List<LabAnalysisSource> sources;
 }
 
 class LabAnalysisService {
@@ -90,6 +99,7 @@ class LabAnalysisService {
       final statusRaw = (jsonMap['status'] ?? '').toString().trim();
 
       final parsedSignals = _parseListStrings(jsonMap['signals']);
+      final parsedSources = _parseSources(jsonMap['sources']);
 
       return LabAnalysisOutput(
         title: title.isNotEmpty ? title : _extractTitle(fileName),
@@ -107,6 +117,9 @@ class LabAnalysisService {
             : _defaultNextSteps(_severityFromString(statusRaw), languageCode),
         severity: _severityFromString(statusRaw),
         signals: parsedSignals,
+        sources: parsedSources.isNotEmpty
+            ? parsedSources
+            : _defaultSources(languageCode),
       );
     } catch (_) {
       return _fallbackAnalysis(fileName, bytes.length, languageCode);
@@ -157,6 +170,7 @@ class LabAnalysisService {
       nextSteps: _defaultNextSteps(severity, languageCode),
       severity: severity,
       signals: signals,
+      sources: _defaultSources(languageCode),
     );
   }
 
@@ -263,11 +277,13 @@ Return ONLY valid JSON with this exact schema:
   "status": "warning|improve|normal",
   "summary": "3-5 short sentences in plain language",
   "recommendation": "2-3 short sentences, practical and easy to follow",
+  "sources": [{"label": "source name", "url": "https://example.com"}],
   "next_steps": ["action 1", "action 2", "action 3"],
   "signals": ["keyword1", "keyword2"]
 }
 
 Rules:
+- Provide at least one credible source (name + URL) for medical recommendations.
 - Be careful and non-diagnostic.
 - If values are unclear, use conservative wording.
 - Explain medical terms in simple everyday language.
@@ -306,6 +322,29 @@ Rules:
           .toList();
     }
     return const <String>[];
+  }
+
+  List<LabAnalysisSource> _parseSources(Object? raw) {
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map(
+            (item) => LabAnalysisSource(
+              label: (item['label'] ?? item['name'] ?? '').toString().trim(),
+              url: (item['url'] ?? item['link'] ?? '').toString().trim(),
+            ),
+          )
+          .where((source) => source.label.isNotEmpty && source.url.isNotEmpty)
+          .toList();
+    }
+    return const <LabAnalysisSource>[];
+  }
+
+  List<LabAnalysisSource> _defaultSources(String languageCode) {
+    return const [
+      LabAnalysisSource(label: 'WHO', url: 'https://www.who.int/'),
+      LabAnalysisSource(label: 'CDC', url: 'https://www.cdc.gov/'),
+    ];
   }
 
   LabAnalysisSeverity _severityFromString(String value) {

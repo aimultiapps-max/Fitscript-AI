@@ -76,11 +76,11 @@ class AuthenticationController extends GetxController {
     );
   }
 
-  void openTermsAndConditions() {
+  void openEULA() {
     final isIndonesian = selectedLanguageCode.value == 'id';
     Get.to<void>(
       () => LegalDocumentView(
-        title: 'legal_terms_title'.tr,
+        title: 'Terms of Use (EULA)',
         assetPath: isIndonesian
             ? 'assets/jsons/terms_and_conditions_fitscript_ai_id.md'
             : 'assets/jsons/terms_and_conditions_fitscript_ai.md',
