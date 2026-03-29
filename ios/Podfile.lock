@@ -32,6 +32,10 @@ PODS:
     - SDWebImage/Core (~> 5.17)
   - sign_in_with_apple (0.0.1):
     - Flutter
+  - tiktok_business_sdk (0.0.1):
+    - Flutter
+    - TikTokBusinessSDK (~> 1.5.0)
+  - TikTokBusinessSDK (1.5.1)
 
 DEPENDENCIES:
   - adaptive_platform_ui (from `.symlinks/plugins/adaptive_platform_ui/ios`)
@@ -39,6 +43,7 @@ DEPENDENCIES:
   - flutter_image_compress_common (from `.symlinks/plugins/flutter_image_compress_common/ios`)
   - printing (from `.symlinks/plugins/printing/ios`)
   - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/ios`)
+  - tiktok_business_sdk (from `.symlinks/plugins/tiktok_business_sdk/ios`)
 
 SPEC REPOS:
   trunk:
@@ -46,6 +51,7 @@ SPEC REPOS:
     - Mantle
     - SDWebImage
     - SDWebImageWebPCoder
+    - TikTokBusinessSDK
 
 EXTERNAL SOURCES:
   adaptive_platform_ui:
@@ -58,6 +64,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/printing/ios"
   sign_in_with_apple:
     :path: ".symlinks/plugins/sign_in_with_apple/ios"
+  tiktok_business_sdk:
+    :path: ".symlinks/plugins/tiktok_business_sdk/ios"
 
 SPEC CHECKSUMS:
   adaptive_platform_ui: f54f620666d1797636f9ef06f49137ef2cc13611
@@ -69,6 +77,8 @@ SPEC CHECKSUMS:
   SDWebImage: 1bb6a1b84b6fe87b972a102bdc77dd589df33477
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   sign_in_with_apple: c5dcc141574c8c54d5ac99dd2163c0c72ad22418
+  tiktok_business_sdk: 9927d89f41d5d9e82ef52cb8d3589ea84bf2fae2
+  TikTokBusinessSDK: 6b59d8a69ee23fa714831e8c6f47c34831abc60b
 
 PODFILE CHECKSUM: bc50e552a9607c3e873c7ca4931a777cf10a4e14
 

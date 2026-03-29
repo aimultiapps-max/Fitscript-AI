@@ -10,6 +10,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 
 import '../../../core/services/in_app_purchase_service.dart';
+import '../../../core/services/tiktok_business_service.dart';
+import 'package:tiktok_business_sdk/tiktok_business_sdk_platform_interface.dart'
+    show EventName;
 
 class PremiumUpgradeView extends StatefulWidget {
   const PremiumUpgradeView({super.key, this.autoRestoreOnOpen = false});
@@ -179,6 +182,15 @@ class _PremiumUpgradeViewState extends State<PremiumUpgradeView> {
           setState(() => _isPurchasing = false);
         }
         await _markPremiumEntitlement(purchase);
+
+        // Lacak event subscription/purchase di TikTok Business SDK
+        try {
+          final tiktokService = Get.find<TikTokBusinessService>();
+          await tiktokService.trackEvent(eventName: EventName.Subscribe);
+        } catch (trackingError) {
+          debugPrint('TikTok subscription tracking failed: $trackingError');
+        }
+
         if (mounted) {
           _showPremiumSnackbar(
             context,

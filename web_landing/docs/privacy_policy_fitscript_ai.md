@@ -47,6 +47,7 @@ Depending on how you use the app, we may process:
 We use data to:
 
 - Analyze lab results and present easier explanations
+- Send the lab report file you upload (image or PDF), including any personal health data it contains, to a third-party AI service (Google Cloud Vertex AI / Gemini) for analysis and insight generation. This is done only with your explicit consent, and you can revoke it in the app settings.
 - Provide personalized lifestyle suggestions (activity and nutrition guidance)
 - Store history so you can monitor trends over time
 - Sync your data across devices when you link an account
@@ -102,6 +103,9 @@ When data is no longer required, we delete or anonymize it where feasible.
 We do **not** sell personal data.
 
 We may share limited data with trusted service providers (for hosting, authentication, analytics, crash reporting) only to operate the app and under appropriate safeguards.
+
+- We share lab report files (images or PDFs) with a third-party AI service (Google Cloud Vertex AI / Gemini) to generate the analysis and insights you see in the app.
+- This sharing is done only when you explicitly consent to AI analysis in the app, and you can withdraw that consent in the app settings.
 
 We may also disclose data if required by law or valid legal request.
 

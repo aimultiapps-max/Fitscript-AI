@@ -45,6 +45,8 @@
 	<string>FitScript AI needs camera access so you can snap a photo of your physical lab reports for instant AI analysis.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow access to your photos to upload screenshots or saved images of your medical reports.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>We use tracking data to provide personalized content in this app.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<!-- Background modes minimized: only include modes the app actually uses. Removed 'remote-notification' and 'processing' to reduce App Store review risk. Add them back only if properly configured with APNs and entitlements. -->

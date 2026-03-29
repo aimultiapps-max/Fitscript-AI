@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -659,7 +660,14 @@ class _HistoryPage extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
+                      Text(
+                        'home_analysis_recommendation_sources_hint'.tr,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         runSpacing: 4,
@@ -1215,7 +1223,16 @@ class _ProfilePage extends StatelessWidget {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    if (!isPremium) ...[
+                    if (isPremium) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: controller.manageSubscription,
+                          child: Text('profile_manage_subscription_button'.tr),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ] else ...[
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
@@ -1228,6 +1245,7 @@ class _ProfilePage extends StatelessWidget {
                   ],
                 ),
               ),
+
               const SizedBox(height: 12),
               _ProfileSectionCard(
                 child: Column(
@@ -1335,30 +1353,32 @@ class _ProfilePage extends StatelessWidget {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.verified_user_outlined),
-                        title: Text(controller.userName),
-                        subtitle: Text(controller.userEmail),
+                        title: Text(
+                          controller.userName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        // subtitle: Text(controller.userEmail),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              _ProfileSectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'profile_trial_usage'.tr,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (isPremium)
+
+              if (!isPremium) ...[
+                const SizedBox(height: 12),
+                _ProfileSectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'profile_trial_unlimited_message'.tr,
-                        style: theme.textTheme.bodyMedium,
-                      )
-                    else
+                        'profile_trial_usage'.tr,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       ...controller.trialUsage.entries.map(
                         (entry) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
@@ -1382,36 +1402,51 @@ class _ProfilePage extends StatelessWidget {
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 12),
               _ProfileSectionCard(
                 child: Column(
                   children: [
                     _ProfileActionTile(
-                      icon: Icons.menu_book_outlined,
+                      icon: CupertinoIcons.doc_text,
                       title: 'auth_usage_guide_title'.tr,
                       onTap: controller.openUsageGuide,
                     ),
                     const Divider(height: 1),
                     _ProfileActionTile(
-                      icon: Icons.privacy_tip_outlined,
+                      icon: CupertinoIcons.lock_shield,
                       title: 'profile_privacy_policy'.tr,
                       onTap: controller.openPrivacyPolicy,
                     ),
                     const Divider(height: 1),
                     _ProfileActionTile(
-                      icon: Icons.article_outlined,
+                      icon: CupertinoIcons.shield,
+                      title: 'profile_ai_analysis_consent'.tr,
+                      subtitle: 'profile_ai_analysis_consent_desc'.tr,
+                      onTap: controller.manageAiAnalysisConsent,
+                    ),
+                    const Divider(height: 1),
+                    _ProfileActionTile(
+                      icon: CupertinoIcons.doc_text,
                       title: 'Terms of Use (EULA)',
                       onTap: controller.openEULA,
                     ),
                     const Divider(height: 1),
                     _ProfileActionTile(
-                      icon: Icons.language_outlined,
+                      icon: CupertinoIcons.globe,
                       title: 'profile_language'.tr,
                       subtitle: controller.selectedLanguageLabel,
                       onTap: () => _showLanguagePicker(context),
+                    ),
+                    const Divider(height: 1),
+                    _ProfileActionTile(
+                      icon: CupertinoIcons.paintbrush,
+                      title: 'profile_theme_mode_title'.tr,
+                      subtitle: controller.selectedThemeModeLabel,
+                      onTap: () => _showThemeModePicker(context),
                     ),
                   ],
                 ),
@@ -1443,7 +1478,8 @@ class _ProfilePage extends StatelessWidget {
                               : controller.deleteAccount,
                           icon: const Icon(Icons.delete_outline),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: theme.colorScheme.error,
+                            foregroundColor: theme.colorScheme.onErrorContainer,
+                            backgroundColor: theme.colorScheme.errorContainer,
                             side: BorderSide(color: theme.colorScheme.error),
                           ),
                           label: Text(
@@ -1535,6 +1571,97 @@ class _ProfilePage extends StatelessWidget {
                     code: 'id',
                     selected: selected,
                     label: 'profile_language_indonesian'.tr,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      label: Text('profile_close'.tr),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  void _showThemeModePicker(BuildContext context) {
+    final theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surfaceContainer,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          bottom: false,
+          child: Obx(() {
+            final selected = controller.selectedThemeMode.value;
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                4,
+                16,
+                16 + MediaQuery.of(context).viewPadding.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'profile_theme_mode_title'.tr,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    controller.selectedThemeModeLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.system,
+                    groupValue: selected,
+                    title: Text('profile_theme_system'.tr),
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.changeThemeMode(value);
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.light,
+                    groupValue: selected,
+                    title: Text('profile_theme_light'.tr),
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.changeThemeMode(value);
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.dark,
+                    groupValue: selected,
+                    title: Text('profile_theme_dark'.tr),
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.changeThemeMode(value);
+                        Navigator.of(context).pop();
+                      }
+                    },
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -2187,7 +2314,18 @@ class _HomeMainContentState extends State<_HomeMainContent>
                                             fontWeight: FontWeight.w700,
                                           ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'home_analysis_recommendation_sources_hint'
+                                          .tr,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSecondaryContainer,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
                                     Wrap(
                                       spacing: 8,
                                       runSpacing: 4,
@@ -2218,6 +2356,9 @@ class _HomeMainContentState extends State<_HomeMainContent>
                                         style: theme.textTheme.labelLarge
                                             ?.copyWith(
                                               fontWeight: FontWeight.w700,
+                                              color: theme
+                                                  .colorScheme
+                                                  .onTertiaryContainer,
                                             ),
                                       ),
                                       const SizedBox(height: 6),

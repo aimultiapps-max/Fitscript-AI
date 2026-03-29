@@ -2,7 +2,10 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tiktok_business_sdk/tiktok_business_sdk_platform_interface.dart'
+    show EventName;
 
+import '../../../core/services/tiktok_business_service.dart';
 import '../../../routes/app_pages.dart';
 
 class OnboardingController extends GetxController {
@@ -65,6 +68,14 @@ class OnboardingController extends GetxController {
 
   Future<void> goToHome() async {
     await _markOnboardingCompleted();
+
+    try {
+      final tiktokService = Get.find<TikTokBusinessService>();
+      await tiktokService.trackEvent(eventName: EventName.CompleteTutorial);
+    } catch (error) {
+      debugPrint('TikTok CompleteTutorial tracking failed: $error');
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final localGuestMode = prefs.getBool('local_guest_mode') ?? false;
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -75,6 +86,14 @@ class OnboardingController extends GetxController {
 
   Future<void> goToHomePreview() async {
     await _markOnboardingCompleted();
+
+    try {
+      final tiktokService = Get.find<TikTokBusinessService>();
+      await tiktokService.trackEvent(eventName: EventName.CompleteTutorial);
+    } catch (error) {
+      debugPrint('TikTok CompleteTutorial tracking failed: $error');
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final localGuestMode = prefs.getBool('local_guest_mode') ?? false;
     final currentUser = FirebaseAuth.instance.currentUser;

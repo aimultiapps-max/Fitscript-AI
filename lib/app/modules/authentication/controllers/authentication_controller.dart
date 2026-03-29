@@ -2,8 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tiktok_business_sdk/tiktok_business_sdk_platform_interface.dart'
+    show EventName;
 
 import '../../../core/services/account_auth_service.dart';
+import '../../../core/services/tiktok_business_service.dart';
 import '../../home/views/legal_document_view.dart';
 import '../../../routes/app_pages.dart';
 
@@ -202,6 +205,25 @@ class AuthenticationController extends GetxController {
     try {
       final result = await _accountAuthService.connectWithGoogle();
       if (result.status == LinkAccountStatus.cancelled) return;
+
+      // Lacak event login TikTok
+      try {
+        final tiktokService = Get.find<TikTokBusinessService>();
+        await tiktokService.trackEvent(eventName: EventName.Login);
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await tiktokService.setIdentify(
+            externalId: user.uid,
+            externalUserName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          );
+        }
+      } catch (trackingError) {
+        debugPrint('TikTok login tracking failed: $trackingError');
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_localGuestModeKey, false);
       Get.offAllNamed(Routes.HOME);
@@ -224,6 +246,25 @@ class AuthenticationController extends GetxController {
     try {
       final result = await _accountAuthService.connectWithApple();
       if (result.status == LinkAccountStatus.cancelled) return;
+
+      // Lacak event login TikTok
+      try {
+        final tiktokService = Get.find<TikTokBusinessService>();
+        await tiktokService.trackEvent(eventName: EventName.Login);
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await tiktokService.setIdentify(
+            externalId: user.uid,
+            externalUserName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          );
+        }
+      } catch (trackingError) {
+        debugPrint('TikTok login tracking failed: $trackingError');
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_localGuestModeKey, false);
       Get.offAllNamed(Routes.HOME);

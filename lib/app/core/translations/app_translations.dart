@@ -43,11 +43,24 @@ class AppTranslations extends Translations {
       'consent_saved_terms': 'Terms and Conditions have been accepted.',
       'ai_analysis_consent_title': 'AI analysis permission',
       'ai_analysis_consent_message':
-          'To generate insights, we send the lab report you upload (image/PDF) to Google’s AI service (Vertex AI / Gemini). Do you agree?',
+          'To generate insights, we send the lab report you upload (image/PDF) — including any personal health information it contains — to Google Cloud’s AI service (Vertex AI / Gemini) for analysis. Do you agree to share this data?',
       'ai_analysis_consent_accept': 'Yes, analyze',
       'ai_analysis_consent_decline': 'No, cancel',
       'ai_analysis_consent_saved_title': 'Saved',
       'ai_analysis_consent_saved_message': 'Your preference has been saved.',
+      'ai_analysis_consent_manage_title': 'AI analysis consent',
+      'ai_analysis_consent_manage_message_granted':
+          'You have allowed lab reports to be sent to Google Cloud Vertex AI (Gemini) for analysis. You can revoke this consent below.',
+      'ai_analysis_consent_manage_message_not_granted':
+          'You have not given consent to send lab reports to the AI service. Analysis will require your permission.',
+      'ai_analysis_consent_manage_grant': 'Grant consent',
+      'ai_analysis_consent_manage_revoke': 'Revoke consent',
+      'ai_analysis_consent_revoked_title': 'Consent revoked',
+      'ai_analysis_consent_revoked_message':
+          'AI analysis is disabled until you grant consent again.',
+      'profile_ai_analysis_consent': 'AI Analysis Data Sharing',
+      'profile_ai_analysis_consent_desc':
+          'Review or revoke consent for sending lab reports to the AI service.',
       'consent_failed_title': 'Failed to save consent',
       'consent_failed_no_session':
           'Account session is not available. Please try again.',
@@ -143,6 +156,8 @@ class AppTranslations extends Translations {
       'home_analysis_findings_label': 'Key findings',
       'home_analysis_recommendation_label': 'Recommendation',
       'home_analysis_recommendation_sources_label': 'Sources',
+      'home_analysis_recommendation_sources_hint':
+          'Tap a source to view the citation or reference supporting these recommendations.',
       'home_analysis_next_steps_label': 'Next steps',
       'home_save_analysis_button': 'Save Analysis Result',
       'home_saving_analysis_button': 'Saving...',
@@ -270,6 +285,7 @@ class AppTranslations extends Translations {
       'profile_danger_zone_description':
           'Delete your account and all related data in Firestore. This action cannot be undone. If Firebase asks for recent login, re-authenticate using the buttons above.',
       'profile_upgrade_button': 'Upgrade to Premium',
+      'profile_manage_subscription_button': 'Manage subscription',
       'profile_restore_button': 'Restore Purchases',
       'profile_sign_out_button': 'Sign Out',
       'profile_sign_out_confirm_title': 'Sign out now?',
@@ -316,6 +332,10 @@ class AppTranslations extends Translations {
           'Purchase restoration is not available in this version yet.',
       'profile_user_default': 'FitScript AI User',
       'profile_user_not_connected': 'Account not connected yet',
+      'profile_theme_mode_title': 'Theme',
+      'profile_theme_system': 'Follow system theme',
+      'profile_theme_light': 'Light Mode',
+      'profile_theme_dark': 'Dark Mode',
       'profile_language': 'Language',
       'profile_language_changed': 'Language updated',
       'profile_language_changed_message': 'App language changed to @language.',
@@ -473,12 +493,26 @@ class AppTranslations extends Translations {
       'consent_saved_terms': 'Terms and Conditions berhasil disetujui.',
       'ai_analysis_consent_title': 'Izin Analisis AI',
       'ai_analysis_consent_message':
-          'Untuk menghasilkan wawasan, kami mengirim dokumen lab yang Anda unggah (gambar/PDF) ke layanan AI Google (Vertex AI / Gemini). Apakah Anda setuju?',
+          'Untuk menghasilkan wawasan, kami mengirim dokumen lab yang Anda unggah (gambar/PDF) — termasuk informasi kesehatan pribadi yang mungkin terkandung di dalamnya — ke layanan AI Google Cloud (Vertex AI / Gemini) untuk dianalisis. Apakah Anda setuju membagikan data ini?',
       'ai_analysis_consent_accept': 'Ya, lanjutkan',
       'ai_analysis_consent_decline': 'Tidak, batalkan',
       'ai_analysis_consent_saved_title': 'Tersimpan',
       'ai_analysis_consent_saved_message': 'Preferensi Anda telah disimpan.',
+      'ai_analysis_consent_manage_title': 'Persetujuan analisis AI',
+      'ai_analysis_consent_manage_message_granted':
+          'Anda telah mengizinkan dokumen lab dikirim ke Google Cloud Vertex AI (Gemini) untuk dianalisis. Anda dapat mencabut izin ini di bawah.',
+      'ai_analysis_consent_manage_message_not_granted':
+          'Anda belum memberikan izin untuk mengirim dokumen lab ke layanan AI. Analisis memerlukan persetujuan Anda.',
+      'ai_analysis_consent_manage_grant': 'Berikan izin',
+      'ai_analysis_consent_manage_revoke': 'Cabut izin',
+      'ai_analysis_consent_revoked_title': 'Izin dibatalkan',
+      'ai_analysis_consent_revoked_message':
+          'Analisis AI dinonaktifkan sampai Anda memberikan izin lagi.',
+      'profile_ai_analysis_consent': 'Pembagian Data Analisis AI',
+      'profile_ai_analysis_consent_desc':
+          'Tinjau atau batalkan persetujuan untuk mengirim dokumen lab ke layanan AI.',
       'consent_failed_title': 'Gagal menyimpan persetujuan',
+
       'consent_failed_no_session': 'Sesi akun tidak tersedia. Coba lagi.',
       'consent_failed_server': 'Terjadi kendala saat menyimpan ke server.',
       'tab_home': 'FitScript AI',
@@ -572,6 +606,8 @@ class AppTranslations extends Translations {
       'home_analysis_findings_label': 'Temuan utama',
       'home_analysis_recommendation_label': 'Rekomendasi',
       'home_analysis_recommendation_sources_label': 'Sumber',
+      'home_analysis_recommendation_sources_hint':
+          'Ketuk sumber untuk melihat sitasi atau referensi yang mendukung rekomendasi ini.',
       'home_analysis_next_steps_label': 'Langkah selanjutnya',
       'home_save_analysis_button': 'Simpan Hasil Analisis',
       'home_saving_analysis_button': 'Menyimpan...',
@@ -698,6 +734,7 @@ class AppTranslations extends Translations {
       'profile_danger_zone_description':
           'Hapus akun dan semua data terkait di Firestore. Tindakan ini tidak dapat dibatalkan. Jika Firebase meminta login ulang, lakukan autentikasi ulang menggunakan tombol di atas.',
       'profile_upgrade_button': 'Upgrade ke Premium',
+      'profile_manage_subscription_button': 'Kelola Langganan',
       'profile_restore_button': 'Pulihkan Pembelian',
       'profile_sign_out_button': 'Keluar',
       'profile_sign_out_confirm_title': 'Keluar sekarang?',
@@ -744,6 +781,10 @@ class AppTranslations extends Translations {
           'Pemulihan pembelian belum tersedia pada versi ini.',
       'profile_user_default': 'Pengguna FitScript AI',
       'profile_user_not_connected': 'Belum terhubung dengan akun',
+      'profile_theme_mode_title': 'Tema',
+      'profile_theme_system': 'Sesuai pengaturan sistem',
+      'profile_theme_light': 'Mode Terang',
+      'profile_theme_dark': 'Mode Gelap',
       'profile_language': 'Bahasa',
       'profile_language_changed': 'Bahasa diperbarui',
       'profile_language_changed_message':

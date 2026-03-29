@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -76,7 +78,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                 body: slide.bodyBuilder(context),
                 // Give the features screen extra bottom padding so the list
                 // never gets hidden behind the navigation buttons.
-                bottomContentPadding: 92,
+                bottomContentPadding: MediaQuery.of(context).padding.bottom,
                 activeIndex: _currentIndex,
                 slideCount: _slides.length,
                 isTablet: isTablet,
@@ -389,121 +391,140 @@ class _OnboardingBackgroundSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      children: [
-        Expanded(
-          flex: isTablet ? 1 : 2,
-          child: SizedBox.expand(
-            child: Stack(
-              fit: StackFit.expand,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Allow the slide to scroll when vertical space is tight (e.g., iPad
+        // split-screen, large font sizes, or small devices).
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
               children: [
-                Image.asset(
-                  imagePath,
-                  fit: isTablet ? BoxFit.contain : BoxFit.cover,
-                  alignment: Alignment.center,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: theme.colorScheme.surfaceContainer,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        size: 42,
-                        color: theme.colorScheme.onSurfaceVariant,
+                SizedBox(
+                  height: constraints.maxHeight * (isTablet ? 0.42 : 0.6),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        imagePath,
+                        fit: isTablet ? BoxFit.contain : BoxFit.cover,
+                        alignment: Alignment.center,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: theme.colorScheme.surfaceContainer,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              size: 42,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.12),
-                        Colors.black.withValues(alpha: 0.28),
-                      ],
-                    ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.12),
+                              Colors.black.withValues(alpha: 0.28),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 14,
+                        bottom: 14,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.32),
+                            ),
+                          ),
+                          child: _TopDotsIndicator(
+                            activeIndex: activeIndex,
+                            count: slideCount,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Positioned(
-                  right: 14,
-                  bottom: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.32),
+                SizedBox(
+                  height: constraints.maxHeight * (isTablet ? 0.58 : 0.4),
+                  child: Center(
+                    child: Container(
+                      width: isTablet
+                          ? math.min(constraints.maxWidth * 0.9, 600)
+                          : double.infinity,
+                      padding: EdgeInsets.fromLTRB(
+                        18,
+                        14,
+                        18,
+                        bottomContentPadding,
                       ),
-                    ),
-                    child: _TopDotsIndicator(
-                      activeIndex: activeIndex,
-                      count: slideCount,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: isTablet
+                            ? BorderRadius.circular(16)
+                            : BorderRadius.zero,
+                        border: Border(
+                          top: BorderSide(
+                            color: theme.colorScheme.outlineVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.shadow.withValues(
+                              alpha: 0.08,
+                            ),
+                            blurRadius: 16,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.outlineVariant,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(child: SingleChildScrollView(child: body)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-        Expanded(
-          flex: isTablet ? 3 : 1,
-          child: Center(
-            child: Container(
-              width: isTablet ? 600 : double.infinity,
-              padding: EdgeInsets.fromLTRB(18, 14, 18, bottomContentPadding),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: isTablet
-                    ? BorderRadius.circular(16)
-                    : BorderRadius.zero,
-                border: Border(
-                  top: BorderSide(
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.5,
-                    ),
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.shadow.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(child: SingleChildScrollView(child: body)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

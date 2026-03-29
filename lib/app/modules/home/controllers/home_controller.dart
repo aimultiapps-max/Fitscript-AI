@@ -16,9 +16,13 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:tiktok_business_sdk/tiktok_business_sdk_platform_interface.dart'
+    show EventName;
 
 import '../../../core/services/account_auth_service.dart';
 import '../../../core/services/lab_analysis_service.dart';
+import '../../../core/services/tiktok_business_service.dart';
 import '../../../routes/app_pages.dart';
 import '../views/legal_document_view.dart';
 import '../views/premium_upgrade_view.dart';
@@ -147,6 +151,7 @@ class HomeController extends GetxController {
   final isCurrentAnalysisSaved = false.obs;
   final isHistoryLoading = false.obs;
   final maxAnalysisFreeTrial = 2.obs;
+  final selectedThemeMode = ThemeMode.system.obs;
   final maxSaveAnalysisResultFreeTrial = 5.obs;
   final usedAnalysisFreeTrial = 0.obs;
   final usedSaveAnalysisResultFreeTrial = 0.obs;
@@ -159,7 +164,6 @@ class HomeController extends GetxController {
   final isSelectedLabFileCompressed = false.obs;
   final pendingAnalysis = Rxn<PendingLabAnalysis>();
   final currentUser = Rxn<User>();
-  final selectedThemeMode = ThemeMode.system.obs;
   final AccountAuthService _accountAuthService;
   final LabAnalysisService _labAnalysisService;
   final ImagePicker _imagePicker;
@@ -168,6 +172,7 @@ class HomeController extends GetxController {
       'trial_usage_analysis_device';
   static const String _trialUsageSaveDeviceKey = 'trial_usage_save_device';
   static const String _localGuestModeKey = 'local_guest_mode';
+  static const String _themeModeKey = 'app_theme_mode';
   static const String _localGuestHistoryKey = 'local_guest_analysis_history_v1';
   static const String _aiAnalysisConsentKey = 'ai_analysis_consent';
   static const String _supportEmail = 'support@fitscript.ai';
@@ -386,6 +391,7 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     _loadLanguagePreference();
+    _loadThemePreference();
     _loadFreeTrialLimits();
     _syncAuthUserState(FirebaseAuth.instance.currentUser);
     _authSubscription = FirebaseAuth.instance.userChanges().listen(
@@ -842,9 +848,39 @@ class HomeController extends GetxController {
     reminderEnabled.value = value;
   }
 
-  void changeThemeMode(ThemeMode mode) {
+  Future<void> _loadThemePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_themeModeKey) ?? 'system';
+
+    final mode = switch (saved) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+
     selectedThemeMode.value = mode;
     Get.changeThemeMode(mode);
+  }
+
+  Future<void> changeThemeMode(ThemeMode mode) async {
+    selectedThemeMode.value = mode;
+    Get.changeThemeMode(mode);
+
+    final prefs = await SharedPreferences.getInstance();
+    final value = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      _ => 'system',
+    };
+    await prefs.setString(_themeModeKey, value);
+  }
+
+  String get selectedThemeModeLabel {
+    return switch (selectedThemeMode.value) {
+      ThemeMode.light => 'profile_theme_light'.tr,
+      ThemeMode.dark => 'profile_theme_dark'.tr,
+      _ => 'profile_theme_system'.tr,
+    };
   }
 
   String get selectedLanguageLabel => selectedLanguageCode.value == 'id'
@@ -980,6 +1016,61 @@ class HomeController extends GetxController {
       'ai_analysis_consent_saved_message'.tr,
     );
     return true;
+  }
+
+  Future<void> manageAiAnalysisConsent() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasConsent = prefs.getBool(_aiAnalysisConsentKey) ?? false;
+
+    final theme = Get.theme;
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: theme.colorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        title: Text('ai_analysis_consent_manage_title'.tr),
+        content: Text(
+          hasConsent
+              ? 'ai_analysis_consent_manage_message_granted'.tr
+              : 'ai_analysis_consent_manage_message_not_granted'.tr,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+            ),
+            child: Text('ai_analysis_consent_decline'.tr),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(
+              hasConsent
+                  ? 'ai_analysis_consent_manage_revoke'.tr
+                  : 'ai_analysis_consent_manage_grant'.tr,
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+
+    if (confirmed != true) return;
+
+    if (hasConsent) {
+      await prefs.setBool(_aiAnalysisConsentKey, false);
+      _showAppSnackbar(
+        'ai_analysis_consent_revoked_title'.tr,
+        'ai_analysis_consent_revoked_message'.tr,
+      );
+      return;
+    }
+
+    await _ensureAiAnalysisConsent();
   }
 
   Future<void> _loadFreeTrialLimits() async {
@@ -1970,6 +2061,55 @@ class HomeController extends GetxController {
 
   void restorePurchases() {
     Get.to<void>(() => const PremiumUpgradeView(autoRestoreOnOpen: true));
+  }
+
+  Future<void> manageSubscription() async {
+    if (kIsWeb) {
+      _showAppSnackbar(
+        'profile_open_link_failed_title'.tr,
+        'profile_open_link_failed_message'.tr,
+      );
+      return;
+    }
+
+    try {
+      // Lacak klik Manage Subscription sebagai event Subscription
+      try {
+        final tiktokService = Get.find<TikTokBusinessService>();
+        await tiktokService.trackEvent(eventName: EventName.Subscribe);
+      } catch (trackingError) {
+        debugPrint('TikTok manageSubscription tracking failed: $trackingError');
+      }
+
+      final packageInfo = await PackageInfo.fromPlatform();
+      final packageName = packageInfo.packageName;
+      final url = _subscriptionManagementUrl(packageName);
+      final uri = Uri.parse(url);
+
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        _showAppSnackbar(
+          'profile_open_link_failed_title'.tr,
+          'profile_open_link_failed_message'.tr,
+        );
+      }
+    } catch (_) {
+      _showAppSnackbar(
+        'profile_open_link_failed_title'.tr,
+        'profile_open_link_failed_message'.tr,
+      );
+    }
+  }
+
+  String _subscriptionManagementUrl(String packageName) {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'https://apps.apple.com/account/subscriptions';
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'https://play.google.com/store/account/subscriptions?package=$packageName';
+    }
+
+    return 'https://play.google.com/store/account/subscriptions';
   }
 
   Future<void> deleteAccount() async {
